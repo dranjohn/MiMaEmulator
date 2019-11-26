@@ -1,0 +1,44 @@
+projectName = "MiMaEmulator"
+
+workspace (projectName)
+	architecture "x64"
+	startproject (projectName)
+
+	configurations
+	{
+		"Debug",
+		"Release"
+	}
+
+outputDir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
+
+project (projectName)
+	location (projectName)
+	kind "ConsoleApp"
+
+	language "C++"
+	cppdialect "C++17"
+	staticruntime "on"
+	
+	targetdir ("bin/" .. outputDir .. "/%{prj.name}")
+	objdir ("bin-int/" .. outputDir .. "/%{prj.name}")
+
+	files
+	{
+		"%{prj.name}/src/**.h",
+		"%{prj.name}/src/**.cpp"
+	}
+
+	filter "system:windows"
+		systemversion "latest"
+		
+
+	filter "configurations:Debug"
+		defines "DEBUG"
+		symbols "On"
+
+	filter "configurations:Release"
+		defines "RELEASE"
+		optimize "On"
+
+	
