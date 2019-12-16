@@ -147,7 +147,7 @@ namespace MiMa {
 			Z = ~X;
 		case 0b111: //equals
 			Z = 0;
-			if(X == Y) {
+			if (X == Y) {
 				Z = ~0;
 			}
 		}
@@ -161,6 +161,7 @@ namespace MiMa {
 		case 1: //writing
 			if (storageAddressRegister != memoryState.address) {
 				memoryState.accessDuration = 0;
+				memoryState.address = storageAddressRegister;
 			}
 
 			if (memoryState.access == 1) {
@@ -177,6 +178,7 @@ namespace MiMa {
 		case 2: //reading
 			if (storageAddressRegister != memoryState.address) {
 				memoryState.accessDuration = 0;
+				memoryState.address = storageAddressRegister;
 			}
 
 			if (memoryState.access == 1) {
