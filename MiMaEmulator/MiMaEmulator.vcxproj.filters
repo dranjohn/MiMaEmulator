@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="mima">
+      <UniqueIdentifier>{E9A19A7C-D5D8-9B0D-7EC5-81106ADB170F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="util">
+      <UniqueIdentifier>{43339F7C-2F6A-A00D-D856-8610C46C1C0F}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\mima\MinimalMachine.h">
+      <Filter>mima</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\BitField.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\MinType.h">
+      <Filter>util</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\Main.cpp" />
+    <ClCompile Include="src\mima\MinimalMachine.cpp">
+      <Filter>mima</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

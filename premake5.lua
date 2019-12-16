@@ -29,6 +29,11 @@ project (projectName)
 		"%{prj.name}/src/**.cpp"
 	}
 
+	includedirs
+	{
+		"%{prj.name}/src"
+	}
+
 	filter "system:windows"
 		systemversion "latest"
 		
