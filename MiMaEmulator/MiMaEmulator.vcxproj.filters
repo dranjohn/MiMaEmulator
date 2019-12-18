@@ -9,6 +9,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\mima\MicroProgram.h">
+      <Filter>mima</Filter>
+    </ClInclude>
     <ClInclude Include="src\mima\MinimalMachine.h">
       <Filter>mima</Filter>
     </ClInclude>
@@ -21,6 +24,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Main.cpp" />
+    <ClCompile Include="src\mima\MicroProgram.cpp">
+      <Filter>mima</Filter>
+    </ClCompile>
     <ClCompile Include="src\mima\MinimalMachine.cpp">
       <Filter>mima</Filter>
     </ClCompile>
