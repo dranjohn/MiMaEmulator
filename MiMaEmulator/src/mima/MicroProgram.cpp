@@ -1,11 +1,12 @@
 #include "MicroProgram.h"
 
 #include "MinimalMachine.h"
+#include "util/CharStream.h"
 
 #include <map>
 #include <vector>
-#include <stack>
 #include <string>
+#include <fstream>
 
 namespace MiMa {
 	//Utility: checking for white spaces
@@ -70,6 +71,7 @@ namespace MiMa {
 	}
 
 
+	//Utility: convert register write identifiers to corresponding control bits
 	uint32_t getWriteBit(const std::string& identifier) {
 		if (identifier == "SDR")
 			return StatusBit::SDR_WRITING;
@@ -87,6 +89,7 @@ namespace MiMa {
 		return 0;
 	}
 
+	//Utility: convert register read identifiers to corresponding control bits
 	uint32_t getReadBit(const std::string& identifier) {
 		if (identifier == "SAR")
 			return StatusBit::SAR_READING;
@@ -106,13 +109,17 @@ namespace MiMa {
 		return 0;
 	}
 
+	//Utility: constants for compiling
 	constexpr uint8_t JUMP_MASK = 0xFF;
 	constexpr uint32_t uint32_t_0 = 0;
 
-	uint32_t(*MOVE_OPERATOR)(std::string, std::string) = [](std::string leftOperand, std::string rightOperand) {
+	//Utility: binary operators understandible by the micro program compiler
+	typedef uint32_t(*BinaryOperator)(std::string, std::string);
+
+	BinaryOperator MOVE_OPERATOR = [](std::string leftOperand, std::string rightOperand) {
 		return getWriteBit(leftOperand) | getReadBit(rightOperand);
 	};
-	uint32_t(*SET_OPERATOR)(std::string, std::string) = [](std::string leftOperand, std::string rightOperand) {
+	BinaryOperator SET_OPERATOR = [](std::string leftOperand, std::string rightOperand) {
 		if (leftOperand == "R") {
 			if (rightOperand == "1") {
 				return static_cast<typename std::underlying_type<StatusBit>::type>(StatusBit::STORAGE_READING);
@@ -160,40 +167,50 @@ namespace MiMa {
 		return uint32_t_0;
 	};
 
+
+
 	class MicroCodeBuilder {
 	private:
 		//a pointer to the memory to manipulate
 		uint32_t* memory;
+		uint8_t firstFree;
 
+		//current line of code encoding
 		bool fixedJump = false;
 		uint32_t currentCode = 0;
-		uint8_t firstFree;
 		
 		//label tracking
 		std::map<std::string, uint8_t> labels;
 		std::multimap<std::string, uint8_t> unresolvedLabels;
 
-		//shunting yard algorithm variables for binary operator input
-		std::stack<std::string> operands;
-		std::stack<uint32_t(*)(std::string, std::string)> operators;
+		//binary operator buffers
+		std::string bufferedOperand;
+		BinaryOperator bufferedOperator;
 	public:
-		MicroCodeBuilder(uint32_t* memory, uint8_t startingPoint) : memory(memory), firstFree(startingPoint) {};
+		MicroCodeBuilder(uint32_t* memory, uint8_t startingPoint) :
+			memory(memory),
+			firstFree(startingPoint),
+			bufferedOperator([](std::string, std::string) { return uint32_t_0; })
+		{};
 
 
-		bool isControl(char control) {
+		static bool isControl(const char& control) {
+			//check if a char is a control character usable for addToken()
 			return control == LABEL
 				|| control == MOVE
 				|| control == SET
 				|| control == BREAK;
 		}
 
-		void addToken(char control, char* token) {
+		void addToken(const char& control, char* token) {
 			switch (control) {
 			case LABEL:
 				{
+					//add the label to the list of found labels
 					std::string label(token);
-					
 					labels.insert({ label, firstFree });
+
+					//resolve any unresolved jumps to this label
 					std::multimap<std::string, uint8_t>::iterator unresolvedLabelLocations = unresolvedLabels.find(label);
 
 					if (unresolvedLabelLocations != unresolvedLabels.end()) {
@@ -208,13 +225,15 @@ namespace MiMa {
 				break;
 
 			case MOVE:
-				operands.push(std::string(token));
-				operators.push(MOVE_OPERATOR);
+				//prepare for second operand of move instruction in next addToken() call
+				bufferedOperand = std::string(token);
+				bufferedOperator = MOVE_OPERATOR;
 				break;
 
 			case SET:
-				operands.push(std::string(token));
-				operators.push(SET_OPERATOR);
+				//prepare for second operand of set instruction in next addToken() call
+				bufferedOperand = std::string(token);
+				bufferedOperator = SET_OPERATOR;
 				break;
 
 			case BREAK:
@@ -235,42 +254,42 @@ namespace MiMa {
 
 				//if the token starts with the jump symbol, treat it as a jump instruction
 				if (*token == JUMP) {
-					std::string label(token + 1);
+					if (fixedJump) {
+						//TODO: this line already has a jump instruction, throw an exception
+					}
 
+					//find label location (ignoring the jump marker)
+					std::string label(token + 1);
 					std::map<std::string, uint8_t>::iterator labelLocation = labels.find(label);
 
-					if (labelLocation != labels.end()) {
+					if (labelLocation != labels.end()) { //label found
 						currentCode &= ~JUMP_MASK;
 						currentCode |= labelLocation->second;
 					}
-					else {
+					else { //label not found, add this to unresolved references
 						unresolvedLabels.insert({ token, firstFree });
 					}
 
+					//mark this instruction as having a fixed jump location
 					fixedJump = true;
 					break;
 				}
 
-				//TODO: fix faulty shunting yard for more than one operation
-				operands.push(std::string(token));
-				while (!operators.empty()) {
-					uint32_t(*tokenOperator)(std::string, std::string) = operators.top();
-					operators.pop();
 
-					if (operands.size() < 2) {
-						//TODO: throw exception
-						return;
-					}
-
-					std::string rightOperand = operands.top().c_str();
-					operands.pop();
-					std::string leftOperand = operands.top().c_str();
-					operands.pop();
-
-					currentCode |= tokenOperator(leftOperand, rightOperand);
+				if (bufferedOperand.empty()) {
+					//TODO: throw an exception for missing operand
 				}
 
-				//TODO: if operands isn't empty, there are mismatched operands
+				{
+					//execute binary operation
+					std::string operand(token);
+					currentCode |= bufferedOperator(bufferedOperand, operand);
+
+					bufferedOperand = std::string();
+				}
+				break;
+			default:
+				//TODO: unknown control char, throw an exception
 				break;
 			}
 		}
@@ -283,24 +302,22 @@ namespace MiMa {
 	};
 
 
-	void readInput(std::uint32_t* memory, char* microProgramCode, uint8_t startingPoint) {
+	void readInput(uint32_t* memory, CharStream& microProgramCodeStream, uint8_t startingPoint) {
 		//initialize token buffer
 		std::vector<char> tokenBuffer;
-		
+
 		//initialize micro code builder
 		MicroCodeBuilder codeBuilder(memory, startingPoint);
+		char input;
 
 		//check for control token
-		while (*microProgramCode != NULL) {
-			char input = *microProgramCode;
-			microProgramCode++;
-
+		while (input = microProgramCodeStream.get()) {
 			if (isWhiteSpace(input)) {
 				continue;
 			}
 
 			//control character terminate tokens
-			if (codeBuilder.isControl(input)) {
+			if (MicroCodeBuilder::isControl(input)) {
 				tokenBuffer.push_back(0);
 				codeBuilder.addToken(input, tokenBuffer.data());
 
@@ -315,5 +332,29 @@ namespace MiMa {
 		//add final token
 		tokenBuffer.push_back(0);
 		codeBuilder.finish(tokenBuffer.data());
+	}
+
+
+	//Interface: read input from a pointer to a char array containing the code for the program.
+	void readInput(std::uint32_t* memory, char* microProgramCode, uint8_t startingPoint) {
+		BufferedCharStream microProgramCodeStream(microProgramCode);
+		readInput(memory, microProgramCodeStream, startingPoint);
+	}
+
+	//Interface: read input from an inputstream providing the code for the program.
+	void readInput(std::uint32_t* memory, std::istream& microProgramCode, uint8_t startingPoint) {
+		InputCharStream microProgramCodeStream(microProgramCode);
+		readInput(memory, microProgramCodeStream, startingPoint);
+	}
+
+
+	//Interface: read input from a file containing the code for the program.
+	void readFile(uint32_t* memory, const char* fileName, uint8_t startingPoint) {
+		std::ifstream fileInput;
+		fileInput.open(fileName);
+
+		readInput(memory, fileInput, startingPoint);
+
+		fileInput.close();
 	}
 }

@@ -94,6 +94,7 @@
     <ClInclude Include="src\mima\MicroProgram.h" />
     <ClInclude Include="src\mima\MinimalMachine.h" />
     <ClInclude Include="src\util\BitField.h" />
+    <ClInclude Include="src\util\CharStream.h" />
     <ClInclude Include="src\util\MinType.h" />
   </ItemGroup>
   <ItemGroup>
@@ -104,4 +105,4 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
-</Project> 
+</Project>

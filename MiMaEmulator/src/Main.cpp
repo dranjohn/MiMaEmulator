@@ -1,7 +1,6 @@
 #include <iostream>
 #include <memory>
 #include <vector>
-#include <sstream>
 
 #include "mima/MicroProgram.h"
 #include "mima/MinimalMachine.h"
@@ -69,7 +68,6 @@ int main() {
 		"ACCU > X; R = 1;;"
 		"R = 1;;"
 		"SDR > Y; ALU = AND; #ret;;";
-
 	MiMa::readInput(instructionDecoder.get(), input);
 
 	memory[0x00] = { 0x000000FF };

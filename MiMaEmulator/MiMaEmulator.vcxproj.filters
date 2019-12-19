@@ -21,6 +21,7 @@
     <ClInclude Include="src\util\MinType.h">
       <Filter>util</Filter>
     </ClInclude>
+    <ClInclude Include="src\util\CharStream.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Main.cpp" />
