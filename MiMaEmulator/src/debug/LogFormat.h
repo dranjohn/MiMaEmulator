@@ -3,7 +3,6 @@
 #include <memory>
 #include <string>
 #include <sstream>
-#include <stack>
 
 namespace MiMa {
 	constexpr char char_ELEMENT = 0xC3;
