@@ -8,4 +8,6 @@ namespace MiMa {
 		spdlogLogger->set_level(logLevel);
 		spdlogLogger->set_pattern(loggerPattern);
 	}
+
+	Logger mimaDefaultLog = Logger("mimaDefaultLogger");
 }

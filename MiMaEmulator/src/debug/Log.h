@@ -10,13 +10,15 @@ namespace MiMa {
 	class Logger {
 	private:
 		std::shared_ptr<spdlog::logger> spdlogLogger;
+
+		//static bool mimaDefaultLogCreated = false;
 	public:
 		Logger(char* name, spdlog::level::level_enum logLevel = spdlog::level::level_enum::trace, const char* loggerPattern = STANDARD_SPDLOG_PATTERN);
 
 		inline std::shared_ptr<spdlog::logger> get_spdlogLogger() { return spdlogLogger; };
 	};
 
-	Logger mimaDefaultLog("mimaDefaultLog");
+	extern Logger mimaDefaultLog;
 }
 
 
@@ -32,11 +34,11 @@ namespace MiMa {
 #define MIMA_LOG_ERROR(...) MiMa::mimaDefaultLog.get_spdlogLogger()->error(__VA_ARGS__)
 #define MIMA_LOG_CRITICAL(...) MiMa::mimaDefaultLog.get_spdlogLogger()->critical(__VA_ARGS__)
 
-#define MIMA_ASSERT_TRACE(assertion, ...) if (!assertion) MiMa::mimaDefaultLog.get_spdlogLogger()->trace(__VA_ARGS__)
-#define MIMA_ASSERT_INFO(assertion, ...) if (!assertion) MiMa::mimaDefaultLog.get_spdlogLogger()->info(__VA_ARGS__)
-#define MIMA_ASSERT_WARN(assertion, ...) if (!assertion) MiMa::mimaDefaultLog.get_spdlogLogger()->warn(__VA_ARGS__)
-#define MIMA_ASSERT_ERROR(assertion, ...) if (!assertion) MiMa::mimaDefaultLog.get_spdlogLogger()->error(__VA_ARGS__)
-#define MIMA_ASSERT_CRITICAL(assertion, ...) if (!assertion) MiMa::mimaDefaultLog.get_spdlogLogger()->critical(__VA_ARGS__)
+#define MIMA_ASSERT_TRACE(assertion, ...) if (!(assertion)) MiMa::mimaDefaultLog.get_spdlogLogger()->trace(__VA_ARGS__)
+#define MIMA_ASSERT_INFO(assertion, ...) if (!(assertion)) MiMa::mimaDefaultLog.get_spdlogLogger()->info(__VA_ARGS__)
+#define MIMA_ASSERT_WARN(assertion, ...) if (!(assertion)) MiMa::mimaDefaultLog.get_spdlogLogger()->warn(__VA_ARGS__)
+#define MIMA_ASSERT_ERROR(assertion, ...) if (!(assertion)) MiMa::mimaDefaultLog.get_spdlogLogger()->error(__VA_ARGS__)
+#define MIMA_ASSERT_CRITICAL(assertion, ...) if (!(assertion)) MiMa::mimaDefaultLog.get_spdlogLogger()->critical(__VA_ARGS__)
 
 #else
 
