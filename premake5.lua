@@ -40,11 +40,11 @@ project (projectName)
 		
 
 	filter "configurations:Debug"
-		defines "DEBUG"
+		defines "MIMA_DEBUG"
 		symbols "On"
 
 	filter "configurations:Release"
-		defines "RELEASE"
+		defines "MIMA_RELEASE"
 		optimize "On"
 
 	

@@ -220,7 +220,7 @@ namespace MiMa {
 	}
 
 
-	void MinimalMachine::printState(std::ostream& output) {
+	void MinimalMachine::printState(std::ostream& output) const {
 		output << "MinimalMachine state:" << std::endl;
 
 		//Instruction decoder state:
@@ -256,15 +256,5 @@ namespace MiMa {
 		output << "SDR: " << storageDataRegister << std::endl;
 
 		structureSkip(0, 0, output);
-
-		/*output << "| Accumulator: " << accumulator.value << " (negative: " << trueFalse(accumulator.negative.value) << ")" << std::endl;
-		output << "| IAR: " << instructionAddressRegister << std::endl;
-		output << "| IR: " << instructionRegister.value << std::endl;
-		//TODO: add information about command in IR
-		output << "| X (first ALU operand): " << X << std::endl;
-		output << "| Y (second ALU operand): " << Y << std::endl;
-		output << "| Z (ALU result): " << Z << std::endl;
-		output << "| SAR: " << storageAddressRegister << std::endl;
-		output << "| SDR: " << storageDataRegister << std::endl;*/
 	}
 }
