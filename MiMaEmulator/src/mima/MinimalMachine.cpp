@@ -1,15 +1,11 @@
 #include "MinimalMachine.h"
 
-#include <ostream>
+#include "debug/Log.h"
+#include "debug/LogFormat.h"
 
 #define READ_MIMA_REGISTER(sb, mc, db, reg) if (StatusBit::sb & mc) db |= reg
 #define WRITE_MIMA_REGISTER(sb, mc, db, reg) if (StatusBit::sb & mc) reg = db
 #define WRITE_MIMA_REGISTER_MASKED(sb, mc, db, reg, msk) if (StatusBit::sb & mc) reg = (db & msk)
-
-constexpr char cELEMENT = 0xC3;
-constexpr char cLAST_ELEMENT = 0xC0;
-constexpr char cSKIP_ELEMENT = 0xB3;
-constexpr char cINDENT = 0x20;
 
 std::string trueFalse(const int& value) {
 	if (value) {
@@ -18,43 +14,6 @@ std::string trueFalse(const int& value) {
 	else {
 		return "false";
 	}
-}
-
-void structure(unsigned int missing, unsigned int skipping, bool last, std::ostream& output) {
-	unsigned int total = missing + skipping;
-	for (int i = 0; i < total; i++) {
-		if (i < missing) {
-			output << cINDENT;
-		}
-		else {
-			output << cSKIP_ELEMENT;
-		}
-		output << cINDENT;
-	}
-
-	if (last) {
-		output << cLAST_ELEMENT;
-	}
-	else {
-		output << cELEMENT;
-	}
-
-	output << cINDENT;
-}
-
-void structureSkip(unsigned int missing, unsigned int skipping, std::ostream& output) {
-	unsigned int total = missing + skipping;
-	for (int i = 0; i < total; i++) {
-		if (i < missing) {
-			output << cINDENT;
-		}
-		else {
-			output << cSKIP_ELEMENT;
-		}
-		output << cINDENT;
-	}
-
-	output << cINDENT << std::endl;
 }
 
 
@@ -77,16 +36,24 @@ namespace MiMa {
 		running(true),
 		instructionDecoderState(0),
 		memoryState({ 0, 0 })
-	{}
+	{
+		MIMA_LOG_INFO("Initializing MiMa");
+	}
 
 
 	void MinimalMachine::emulateClockCycle() {
+		MIMA_LOG_TRACE("Starting MiMa clock cycle emulation");
+
 		//get microcode for current register transfer
 		uint32_t microCode = instructionDecoder[instructionDecoderState];
 		uint8_t opCode = instructionRegister.opCode.value;
 		uint32_t decoding = (microCode & StatusBit::DECODING) >> 28;
 
+		MIMA_LOG_TRACE("Found microprogram instruction 0x{:08X}", microCode);
+
 		if (decoding > 0) {
+			MIMA_LOG_TRACE("Found decoding state 0x{:02X}", decoding);
+
 			DecodeAction action = decodingFunction(decoding, opCode, instructionDecoderState);
 
 			switch (action) {
@@ -100,6 +67,8 @@ namespace MiMa {
 			}
 		}
 
+		MIMA_LOG_TRACE("Found operation code 0x{:02X}", opCode);
+
 		//put data on the data bus
 		Data dataBus = 0;
 		READ_MIMA_REGISTER(SDR_WRITING, microCode, dataBus, storageDataRegister);
@@ -108,6 +77,7 @@ namespace MiMa {
 		READ_MIMA_REGISTER(ONE, microCode, dataBus, ONE);
 		READ_MIMA_REGISTER(ALU_RESULT, microCode, dataBus, Z);
 		READ_MIMA_REGISTER(ACCUMULATOR_WRITING, microCode, dataBus, accumulator.value);
+		MIMA_LOG_TRACE("Databus state after writing is 0x{:08X}", dataBus);
 
 		//TODO: replace databus |= reg with short circuits
 
@@ -122,6 +92,7 @@ namespace MiMa {
 
 		//Alu operation
 		uint8_t ALUoperation = (microCode & StatusBit::ALU_C) >> 12;
+		MIMA_LOG_TRACE("Alu operation code: 0x{:01X}", ALUoperation);
 
 		switch(ALUoperation) {
 		case 0:
@@ -154,6 +125,7 @@ namespace MiMa {
 
 		//storage access
 		uint8_t storageAccess = (microCode & 0xC00) >> 10;
+		MIMA_LOG_TRACE("Storage access bits are 0b{:02b}", storageAccess);
 		switch (storageAccess) {
 		case 0:
 			memoryState.accessDuration = 0;
@@ -175,6 +147,7 @@ namespace MiMa {
 					memory[storageAddressRegister].data = storageDataRegister;
 				}
 			}
+			break;
 		case 2: //reading
 			if (storageAddressRegister != memoryState.address) {
 				memoryState.accessDuration = 0;
@@ -192,8 +165,9 @@ namespace MiMa {
 					storageDataRegister = memory[storageAddressRegister].data;
 				}
 			}
+			break;
 		case 3:
-			//TODO: error on R = W = 1
+			MIMA_LOG_ERROR("MiMa is set to read and write from storage, storage access failed");
 			break;
 		}
 
@@ -203,9 +177,17 @@ namespace MiMa {
 			running = false;
 		}
 		instructionDecoderState = nextInstructionDecoderState;
+		MIMA_LOG_TRACE("MiMa decoder now reading instruction 0x{:02X}", instructionDecoderState);
 	}
 
 	void MinimalMachine::emulateInstructionCycle() {
+		if (!running) {
+			MIMA_LOG_WARN("Failed to start instruction cycle emulation on a stopped MiMa");
+			return;
+		}
+
+		MIMA_LOG_TRACE("Starting MiMa instruction cycle emulation");
+
 		//keep emulating clock cycles until the instruction zero is reached or the MiMa is halted
 		do {
 			emulateClockCycle();
@@ -213,6 +195,9 @@ namespace MiMa {
 	}
 
 	void MinimalMachine::emulateLifeTime() {
+		MIMA_LOG_TRACE("Starting MiMa lifetime cycle emulation");
+		MIMA_ASSERT_WARN(running, "MiMa is stopped, lifetime emulation terminated");
+
 		//keep emulating clock cycles until the MiMa is halted
 		while (running) {
 			emulateClockCycle();
@@ -220,41 +205,23 @@ namespace MiMa {
 	}
 
 
-	void MinimalMachine::printState(std::ostream& output) const {
-		output << "MinimalMachine state:" << std::endl;
+	void MinimalMachine::printState() const {
+		//TODO: fix hierarchy format
+		HierarchyFormat format("Minimal machine state:");
+		format.addElement("running: " + trueFalse(running));
+		format.addElement("instruction decoder state:");
+		format.addChild("next microprogram instruction address: ");
+		format.addElement("next microprogram instruction code: ", true);
+		format.addElement("register states:", true);
+		format.addChild("IAR: ");
+		format.addElement("IR: ");
+		format.addElement("X: ");
+		format.addElement("Y: ");
+		format.addElement("Z: ");
+		format.addElement("Accumulator: ");
+		format.addElement("SAR: ");
+		format.addElement("SDR: ", true);
 
-		//Instruction decoder state:
-		structure(0, 0, false, output);
-		output << "Decoder state" << std::endl;
-		
-		structure(0, 1, false, output);
-		output << "Next regTransfer: " << (int)instructionDecoderState << std::endl;
-		structure(0, 1, true, output);
-		output << "Running: " << trueFalse(running) << std::endl;
-
-		structureSkip(0, 1, output);
-
-		//Registers:
-		structure(0, 0, true, output);
-		output << "Registers" << std::endl;
-
-		structure(1, 0, false, output);
-		output << "Accumulator: " << accumulator.value << " (negative: " << trueFalse(accumulator.negative.value) << ")" << std::endl;
-		structure(1, 0, false, output);
-		output << "IAR: " << instructionAddressRegister << std::endl;
-		structure(1, 0, false, output);
-		output << "IR: " << instructionRegister.value << std::endl;
-		structure(1, 0, false, output);
-		output << "X: " << X << std::endl;
-		structure(1, 0, false, output);
-		output << "Y: " << Y << std::endl;
-		structure(1, 0, false, output);
-		output << "Z: " << Z << std::endl;
-		structure(1, 0, false, output);
-		output << "SAR: " << storageAddressRegister << std::endl;
-		structure(1, 0, true, output);
-		output << "SDR: " << storageDataRegister << std::endl;
-
-		structureSkip(0, 0, output);
+		//MIMA_LOG_INFO("\n{}", format.getBuffer());
 	}
 }

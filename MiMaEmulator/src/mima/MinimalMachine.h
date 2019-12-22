@@ -103,6 +103,6 @@ namespace MiMa {
 		void emulateInstructionCycle();
 		void emulateLifeTime();
 
-		void printState(std::ostream& output) const;
+		void printState() const;
 	};
 }

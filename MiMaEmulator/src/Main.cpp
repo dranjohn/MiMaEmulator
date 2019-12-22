@@ -4,6 +4,7 @@
 
 #include "mima/MicroProgram.h"
 #include "mima/MinimalMachine.h"
+#include "debug/Log.h"
 
 MiMa::DecodeAction decodeInstructionJump(const uint8_t&, const uint8_t& opCode, uint8_t& instructionDecoderState) {
 	uint8_t shortOpCode = (opCode & 0xF0) >> 4;
@@ -40,34 +41,36 @@ MiMa::DecodeAction decodeInstructionJump(const uint8_t&, const uint8_t& opCode, 
 }
 
 int main() {
+	MiMa::mimaDefaultLog.setLogLevel(spdlog::level::level_enum::info);
+
 	std::unique_ptr<uint32_t[]> instructionDecoder = std::make_unique<uint32_t[]>(256);
 	std::unique_ptr<MiMa::MemoryCell[]> memory = std::make_unique<MiMa::MemoryCell[]>(MiMa::MinimalMachine::MEMORY_CAPACITY);
 
 	char* input =
-		"start: IAR > SAR; IAR > X; R = 1;;"
-		"ONE > Y; R = 1;;"
-		"ALU = ADD; R = 1;;"
-		"Z > IAR;;"
-		"SDR > IR;;"
-		"D = 1;;"
-		"ret: Z > ACCU; #start;;"
-		"ldc: IR > ACCU; #start;;"
-		"ldv: IR > SAR; R = 1;;"
-		"R = 1;;"
-		"R = 1;;"
-		"SDR > ACCU; #start;;"
-		"stv: IR > SAR;;"
-		"ACCU > SDR; W = 1;;"
-		"W = 1;;"
-		"W = 1; #start;;"
-		"add: IR > SAR; R = 1;;"
-		"ACCU > X; R = 1;;"
-		"R = 1;;"
-		"SDR > Y; ALU = ADD; #ret;;"
-		"and: IR > SAR; R = 1;;"
-		"ACCU > X; R = 1;;"
-		"R = 1;;"
-		"SDR > Y; ALU = AND; #ret;;";
+		"start: IAR > SAR; IAR > X; R = 1;;\n"
+		"ONE > Y; R = 1;;\n"
+		"ALU = ADD; R = 1;;\n"
+		"Z > IAR;;\n"
+		"SDR > IR;;\n"
+		"D = 1;;\n"
+		"ret: Z > ACCU; #start;;\n"
+		"ldc: IR > ACCU; #start;;\n"
+		"ldv: IR > SAR; R = 1;;\n"
+		"R = 1;;\n"
+		"R = 1;;\n"
+		"SDR > ACCU; #start;;\n"
+		"stv: IR > SAR;;\n"
+		"ACCU > SDR; W = 1;;\n"
+		"W = 1;;\n"
+		"W = 1; #start;;\n"
+		"add: IR > SAR; R = 1;;\n"
+		"ACCU > X; R = 1;;\n"
+		"R = 1;;\n"
+		"SDR > Y; ALU = ADD; #ret;;\n"
+		"and: IR > SAR; R = 1;;\n"
+		"ACCU > X; R = 1;;\n"
+		"R = 1;;\n"
+		"SDR > Y; ALU = AND; #ret;;\n";
 	MiMa::readInput(instructionDecoder.get(), input);
 
 	memory[0x00] = { 0x000000FF };
@@ -76,10 +79,10 @@ int main() {
 	memory[0x20] = { 0x00000003 };
 
 	MiMa::MinimalMachine mima(instructionDecoder.get(), decodeInstructionJump, memory.get());
-	mima.printState(std::cout);
+	mima.printState();
 	
 	mima.emulateLifeTime();
-	mima.printState(std::cout);
+	//mima.printState();
 
 	return 0;
 }

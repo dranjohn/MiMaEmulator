@@ -10,12 +10,11 @@ namespace MiMa {
 	class Logger {
 	private:
 		std::shared_ptr<spdlog::logger> spdlogLogger;
-
-		//static bool mimaDefaultLogCreated = false;
 	public:
 		Logger(char* name, spdlog::level::level_enum logLevel = spdlog::level::level_enum::trace, const char* loggerPattern = STANDARD_SPDLOG_PATTERN);
 
 		inline std::shared_ptr<spdlog::logger> get_spdlogLogger() { return spdlogLogger; };
+		inline void setLogLevel(spdlog::level::level_enum logLevel) { spdlogLogger->set_level(logLevel); };
 	};
 
 	extern Logger mimaDefaultLog;

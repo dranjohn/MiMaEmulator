@@ -2,11 +2,13 @@
 
 #include "MinimalMachine.h"
 #include "util/CharStream.h"
+#include "debug/Log.h"
 
 #include <map>
 #include <vector>
 #include <string>
 #include <fstream>
+#include <limits>
 
 namespace MiMa {
 	//Utility: checking for white spaces
@@ -186,12 +188,15 @@ namespace MiMa {
 		//binary operator buffers
 		std::string bufferedOperand;
 		BinaryOperator bufferedOperator;
+		bool operatorBufferOccupied = false;
 	public:
 		MicroCodeBuilder(uint32_t* memory, uint8_t startingPoint) :
 			memory(memory),
 			firstFree(startingPoint),
 			bufferedOperator([](std::string, std::string) { return uint32_t_0; })
-		{};
+		{
+			MIMA_LOG_INFO("Initializing microcode builder, starting compilation at 0x{:02X}", startingPoint);
+		};
 
 
 		static bool isControl(const char& control) {
@@ -206,6 +211,7 @@ namespace MiMa {
 			switch (control) {
 			case LABEL:
 				{
+					MIMA_LOG_TRACE("Found label '{}' at address 0x{:02X}", token, firstFree);
 					//add the label to the list of found labels
 					std::string label(token);
 					labels.insert({ label, firstFree });
@@ -219,6 +225,8 @@ namespace MiMa {
 							memory[unresolvedLabelLocations->second] |= firstFree;
 
 							unresolvedLabelLocations++;
+
+							MIMA_LOG_TRACE("Resolved jump from 0x{:02X} to 0x{:02X}", unresolvedLabelLocations->second, firstFree);
 						}
 					}
 				}
@@ -228,25 +236,30 @@ namespace MiMa {
 				//prepare for second operand of move instruction in next addToken() call
 				bufferedOperand = std::string(token);
 				bufferedOperator = MOVE_OPERATOR;
+				operatorBufferOccupied = true;
 				break;
 
 			case SET:
 				//prepare for second operand of set instruction in next addToken() call
 				bufferedOperand = std::string(token);
 				bufferedOperator = SET_OPERATOR;
+				operatorBufferOccupied = true;
 				break;
 
 			case BREAK:
 				//if the token is empty, the break operator stands for end-of-line
 				if (*token == 0) {
 					if (!fixedJump) {
+						MIMA_LOG_TRACE("Setting automatic jump to next address 0x{:02X} for microprogram instruction 0x{:08X}", firstFree + 1, currentCode);
 						currentCode |= (firstFree + 1);
 					}
 
 					memory[firstFree] = currentCode;
+					MIMA_LOG_TRACE("Compiled microcode 0x{:08X}, stored at 0x{:02X}", currentCode, firstFree);
 
 					fixedJump = false;
 					firstFree++;
+					MIMA_ASSERT_WARN(firstFree != 0, "Memory position overflow in compilation, continuing to compile at 0x00.");
 					currentCode = 0;
 
 					break;
@@ -255,7 +268,8 @@ namespace MiMa {
 				//if the token starts with the jump symbol, treat it as a jump instruction
 				if (*token == JUMP) {
 					if (fixedJump) {
-						//TODO: this line already has a jump instruction, throw an exception
+						MIMA_LOG_WARN("Found multiple jump instruction in one line of microprogram code, ignoring jump instruction to '{}'", token);
+						break;
 					}
 
 					//find label location (ignoring the jump marker)
@@ -263,10 +277,12 @@ namespace MiMa {
 					std::map<std::string, uint8_t>::iterator labelLocation = labels.find(label);
 
 					if (labelLocation != labels.end()) { //label found
+						MIMA_LOG_TRACE("Found microprogram jump instruction from 0x{:02X} to 0x{:02X}", firstFree, labelLocation->second);
 						currentCode &= ~JUMP_MASK;
 						currentCode |= labelLocation->second;
 					}
 					else { //label not found, add this to unresolved references
+						MIMA_LOG_TRACE("Found unresolved microprogram jump from 0x{:02X}", firstFree);
 						unresolvedLabels.insert({ token, firstFree });
 					}
 
@@ -274,30 +290,31 @@ namespace MiMa {
 					fixedJump = true;
 					break;
 				}
-
-
-				if (bufferedOperand.empty()) {
-					//TODO: throw an exception for missing operand
-				}
-
-				{
+				
+				MIMA_ASSERT_WARN(operatorBufferOccupied, "Found token '{}' with no preceeding binary operator", token);
+				if (operatorBufferOccupied) {
 					//execute binary operation
 					std::string operand(token);
 					currentCode |= bufferedOperator(bufferedOperand, operand);
 
 					bufferedOperand = std::string();
+					operatorBufferOccupied = false;
 				}
 				break;
 			default:
-				//TODO: unknown control char, throw an exception
+				MIMA_LOG_ERROR("Found unknown control symbol '{}'", control);
 				break;
 			}
 		}
 
 
 		void finish(char* remaining) {
-			//TODO: ensure clean state
-			//TODO: ensure nothing remaining
+			MIMA_ASSERT_WARN(!operatorBufferOccupied, "Binary operator remaining after finishing compilation with operand '{}'", bufferedOperand);
+			MIMA_ASSERT_WARN(currentCode == 0, "Failed to write last line in compilation 0x({:08X}) into dedicated memory position 0x{:02X}", currentCode, firstFree);
+
+			MIMA_ASSERT_WARN(*remaining == 0, "Found '{}' after finishing compilation", remaining);
+
+			MIMA_LOG_INFO("Finished microprogram compilation at 0x{:02X}", firstFree);
 		}
 	};
 
@@ -319,6 +336,10 @@ namespace MiMa {
 			//control character terminate tokens
 			if (MicroCodeBuilder::isControl(input)) {
 				tokenBuffer.push_back(0);
+
+				MIMA_LOG_TRACE("Found microprogram token: '{}'", tokenBuffer.data());
+				MIMA_LOG_TRACE("Found microprogram control character: '{}'", input);
+
 				codeBuilder.addToken(input, tokenBuffer.data());
 
 				tokenBuffer.clear();
@@ -337,12 +358,16 @@ namespace MiMa {
 
 	//Interface: read input from a pointer to a char array containing the code for the program.
 	void readInput(std::uint32_t* memory, char* microProgramCode, uint8_t startingPoint) {
+		MIMA_LOG_INFO("Compiling microprogram from given code string");
+
 		BufferedCharStream microProgramCodeStream(microProgramCode);
 		readInput(memory, microProgramCodeStream, startingPoint);
 	}
 
 	//Interface: read input from an inputstream providing the code for the program.
 	void readInput(std::uint32_t* memory, std::istream& microProgramCode, uint8_t startingPoint) {
+		MIMA_LOG_INFO("Starting microprogram compilation");
+		
 		InputCharStream microProgramCodeStream(microProgramCode);
 		readInput(memory, microProgramCodeStream, startingPoint);
 	}
@@ -350,6 +375,8 @@ namespace MiMa {
 
 	//Interface: read input from a file containing the code for the program.
 	void readFile(uint32_t* memory, const char* fileName, uint8_t startingPoint) {
+		MIMA_LOG_INFO("Compiling microprogram from file '{}'", fileName);
+
 		std::ifstream fileInput;
 		fileInput.open(fileName);
 

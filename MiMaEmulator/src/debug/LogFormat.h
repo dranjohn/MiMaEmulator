@@ -23,48 +23,8 @@ namespace MiMa {
 
 		inline std::string getBuffer() const { return buffer.str(); };
 
-		template <typename Content>
-		void addElement(Content content, bool last = false) {
-			if (completed) {
-				//TODO: warn
-			}
-
-			for (unsigned int i = 0; i < indent + skip; i++) {
-				buffer << ((i < indent) ? char_INDENT : char_SKIP_ELEMENT) << char_INDENT;
-			}
-
-			if (last) {
-				buffer << char_LAST_ELEMENT;
-
-				if (skip == 0) {
-					completed = true;
-				}
-				else {
-					skip--;
-				}
-			}
-			else {
-				buffer << char_ELEMENT;
-			}
-
-			buffer << char_INDENT << content << std::endl;
-
-			if (last && !completed) {
-				emptyLine();
-			}
-		}
-		template <typename Content>
-		void addChild(Content content, bool last = false) {
-			if (completed) {
-				completed = false;
-				indent++;
-			}
-			else {
-				skip++;
-			}
-
-			addElement(content, last);
-		}
+		void addElement(std::string content, bool last = false);
+		void addChild(std::string content, bool last = false);
 
 		void emptyLine();
 	};

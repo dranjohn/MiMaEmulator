@@ -9,5 +9,5 @@ namespace MiMa {
 		spdlogLogger->set_pattern(loggerPattern);
 	}
 
-	Logger mimaDefaultLog = Logger("mimaDefaultLogger");
+	Logger mimaDefaultLog("mimaDefaultLogger");
 }
