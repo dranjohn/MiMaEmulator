@@ -6,38 +6,39 @@
 #include "mima/MinimalMachine.h"
 #include "debug/Log.h"
 
-MiMa::DecodeAction decodeInstructionJump(const uint8_t&, const uint8_t& opCode, uint8_t& instructionDecoderState) {
+uint32_t decodeInstructionJump(const uint8_t&, const uint8_t& opCode, const uint8_t& instructionDecoderState) {
 	uint8_t shortOpCode = (opCode & 0xF0) >> 4;
 	
+	uint32_t nextAddress = 0;
 	if (shortOpCode == 0xF) { //use extended opCode
 		uint8_t opCodeExtension = opCode & 0xF;
 
 		switch (opCodeExtension) {
 		case 0:
-			return MiMa::DecodeAction::HALT;
+			return instructionDecoderState;
 		}
 	}
 	else { //use shortOpCode
 		switch(shortOpCode) {
 		case 0:
-			instructionDecoderState = 0x07;
+			nextAddress = 0x07;
 			break;
 		case 1:
-			instructionDecoderState = 0x08;
+			nextAddress = 0x08;
 			break;
 		case 2:
-			instructionDecoderState = 0x0C;
+			nextAddress = 0x0C;
 			break;
 		case 3:
-			instructionDecoderState = 0x10;
+			nextAddress = 0x10;
 			break;
 		case 4:
-			instructionDecoderState = 0x14;
+			nextAddress = 0x14;
 			break;
 		}
 	}
 
-	return MiMa::DecodeAction::SKIP_CYCLE;
+	return nextAddress;
 }
 
 int main() {

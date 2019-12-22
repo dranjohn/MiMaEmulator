@@ -18,7 +18,7 @@ std::string trueFalse(const int& value) {
 
 
 namespace MiMa {
-	MinimalMachine::MinimalMachine(uint32_t* instructionDecoder, DecodeAction(*decodingFunction)(const uint8_t&, const uint8_t&, uint8_t&), MemoryCell memory[MEMORY_CAPACITY]) :
+	MinimalMachine::MinimalMachine(uint32_t* instructionDecoder, uint32_t(*decodingFunction)(const uint8_t&, const uint8_t&, const uint8_t&), MemoryCell memory[MEMORY_CAPACITY]) :
 		//registers
 		accumulator({ 0 }),
 		instructionAddressRegister(0),
@@ -54,17 +54,7 @@ namespace MiMa {
 		if (decoding > 0) {
 			MIMA_LOG_TRACE("Found decoding state 0x{:02X}", decoding);
 
-			DecodeAction action = decodingFunction(decoding, opCode, instructionDecoderState);
-
-			switch (action) {
-			case DecodeAction::CONTINUE:
-				break;
-			case DecodeAction::SKIP_CYCLE:
-				return;
-			case DecodeAction::HALT:
-				running = false;
-				return;
-			}
+			microCode = decodingFunction(decoding, opCode, instructionDecoderState);
 		}
 
 		MIMA_LOG_TRACE("Found operation code 0x{:02X}", opCode);

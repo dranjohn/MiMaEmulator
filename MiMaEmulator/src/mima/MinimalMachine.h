@@ -8,12 +8,6 @@
 #define BIT(n) (1 << n)
 
 namespace MiMa {
-	static const enum class DecodeAction {
-		CONTINUE,
-		SKIP_CYCLE,
-		HALT
-	};
-
 	static const enum StatusBit : uint32_t {
 		FOLLOWING_ADDRESS = 0xFF,
 		RESERVED = 0x300,
@@ -89,7 +83,7 @@ namespace MiMa {
 
 		//Exchangable MiMa components:
 		uint32_t* instructionDecoder;
-		DecodeAction(*decodingFunction)(const uint8_t&, const uint8_t&, uint8_t&); //arguments: decoding value, opCode, ptr to instructionDecoderState
+		uint32_t(*decodingFunction)(const uint8_t&, const uint8_t&, const uint8_t&); //arguments: decoding value, opCode, ptr to instructionDecoderState
 		MemoryCell* memory;
 
 		//MiMa state:
@@ -97,7 +91,7 @@ namespace MiMa {
 		uint8_t instructionDecoderState;
 		MemoryState memoryState;
 	public:
-		MinimalMachine(uint32_t* instructionDecoder, DecodeAction(*decodingFunction)(const uint8_t&, const uint8_t&, uint8_t&), MemoryCell memory[MEMORY_CAPACITY]);
+		MinimalMachine(uint32_t* instructionDecoder, uint32_t(*decodingFunction)(const uint8_t&, const uint8_t&, const uint8_t&), MemoryCell memory[MEMORY_CAPACITY]);
 
 		void emulateClockCycle();
 		void emulateInstructionCycle();
