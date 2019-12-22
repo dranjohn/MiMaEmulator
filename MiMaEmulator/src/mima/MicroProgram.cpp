@@ -1,47 +1,29 @@
 #include "MicroProgram.h"
 
-#include "MinimalMachine.h"
-#include "util/CharStream.h"
+#include "StatusBit.h"
 #include "debug/Log.h"
 
-#include <map>
 #include <vector>
-#include <string>
 #include <fstream>
 #include <limits>
+#include <cctype>
 
 namespace MiMa {
-	//Utility: checking for white spaces
-	constexpr char* WHITESPACES = " \t\n";
-	bool isWhiteSpace(const char& input) {
-		char* whitespace = WHITESPACES;
-		while (*whitespace != NULL) {
-			if (input == *whitespace) {
-				return true;
+	//Utility: checking for letters (matching regex [a-zA-Z]*)
+	bool isalphastring(const char* inputString) {
+		while (*inputString != 0) {
+			if (!isalpha(*inputString)) {
+				return false;
 			}
-
-			whitespace++;
 		}
 
-		return false;
-	}
-
-	//Utility: checking for letters (matching regex [a-zA-Z])
-	constexpr char char_a = 0x41;
-	constexpr char char_z = 0x5A;
-	constexpr char char_A = 0x61;
-	constexpr char char_Z = 0x7A;
-	bool isAlphabetic(const char& input) {
-		return (char_a <= input && input <= char_z) || (char_A <= input && input <= char_Z);
+		return true;
 	}
 
 	//Utility: checking for numbers (matching regex [0-9])
 	constexpr char char_0 = 0x30;
 	constexpr char char_1 = char_0 + 1;
-	bool isNumber(const char& input) {
-		return (char_0 <= input && input <= char_0 + 10);
-	}
-	bool isBinary(const char& input) {
+	bool isbinary(const char& input) {
 		return input == char_0 || input == char_1;
 	}
 
@@ -115,7 +97,7 @@ namespace MiMa {
 	constexpr uint8_t JUMP_MASK = 0xFF;
 	constexpr uint32_t uint32_t_0 = 0;
 
-	//Utility: binary operators understandible by the micro program compiler
+	//Utility: binary operators understandable by the micro program compiler
 	typedef uint32_t(*BinaryOperator)(std::string, std::string);
 
 	BinaryOperator MOVE_OPERATOR = [](std::string leftOperand, std::string rightOperand) {
@@ -148,7 +130,7 @@ namespace MiMa {
 				char digit = *value;
 				value++;
 
-				if (!isNumber(digit)) {
+				if (!isdigit(digit)) {
 					return uint32_t_0;
 				}
 
@@ -174,25 +156,27 @@ namespace MiMa {
 	class MicroCodeBuilder {
 	private:
 		//a pointer to the memory to manipulate
-		uint32_t* memory;
-		uint8_t firstFree;
+		std::shared_ptr<uint32_t[]> memory;
+		uint8_t& firstFree;
 
 		//current line of code encoding
 		bool fixedJump = false;
 		uint32_t currentCode = 0;
 		
 		//label tracking
-		std::map<std::string, uint8_t> labels;
-		std::multimap<std::string, uint8_t> unresolvedLabels;
+		std::map<std::string, uint8_t>& labels;
+		std::multimap<std::string, uint8_t>& unresolvedLabels;
 
 		//binary operator buffers
 		std::string bufferedOperand;
 		BinaryOperator bufferedOperator;
 		bool operatorBufferOccupied = false;
 	public:
-		MicroCodeBuilder(uint32_t* memory, uint8_t startingPoint) :
+		MicroCodeBuilder(std::shared_ptr<uint32_t[]>& memory, uint8_t& startingPoint, std::map<std::string, uint8_t>& labels, std::multimap<std::string, uint8_t>& unresolvedLabels) :
 			memory(memory),
 			firstFree(startingPoint),
+			labels(labels),
+			unresolvedLabels(unresolvedLabels),
 			bufferedOperator([](std::string, std::string) { return uint32_t_0; })
 		{
 			MIMA_LOG_INFO("Initializing microcode builder, starting compilation at 0x{:02X}", startingPoint);
@@ -309,8 +293,8 @@ namespace MiMa {
 
 
 		void finish(char* remaining) {
-			MIMA_ASSERT_WARN(!operatorBufferOccupied, "Binary operator remaining after finishing compilation with operand '{}'", bufferedOperand);
-			MIMA_ASSERT_WARN(currentCode == 0, "Failed to write last line in compilation 0x({:08X}) into dedicated memory position 0x{:02X}", currentCode, firstFree);
+			MIMA_ASSERT_ERROR(!operatorBufferOccupied, "Binary operator remaining after finishing compilation with operand '{}'", bufferedOperand);
+			MIMA_ASSERT_ERROR(currentCode == 0, "Failed to write last line in compilation 0x({:08X}) into dedicated memory position 0x{:02X}", currentCode, firstFree);
 
 			MIMA_ASSERT_WARN(*remaining == 0, "Found '{}' after finishing compilation", remaining);
 
@@ -319,17 +303,54 @@ namespace MiMa {
 	};
 
 
-	void readInput(uint32_t* memory, CharStream& microProgramCodeStream, uint8_t startingPoint) {
+
+	MicroProgram::MicroProgram(const uint8_t& startingPoint) : memory(new uint32_t[256]) , firstFree(startingPoint) {
+		MIMA_LOG_INFO("Created microprogram starting at 0x{:02X}", startingPoint);
+		MIMA_LOG_WARN("Using the microprogram compiler is not thread-safe!");
+	}
+
+
+	//Interface: read input from a pointer to a char array containing the code for the program.
+	void MicroProgram::compile(char* microProgramCode) {
+		MIMA_LOG_INFO("Compiling microprogram from given code string");
+
+		BufferedCharStream microProgramCodeStream(microProgramCode);
+		compile(microProgramCodeStream);
+	}
+
+	//Interface: read input from an inputstream providing the code for the program.
+	void MicroProgram::compile(std::istream& microProgramCode) {
+		MIMA_LOG_INFO("Starting microprogram compilation");
+		
+		InputCharStream microProgramCodeStream(microProgramCode);
+		compile(microProgramCodeStream);
+	}
+
+
+	//Interface: read input from a file containing the code for the program.
+	void MicroProgram::compileFile(const char* fileName) {
+		MIMA_LOG_INFO("Compiling microprogram from file '{}'", fileName);
+
+		std::ifstream fileInput;
+		fileInput.open(fileName);
+
+		compile(fileInput);
+
+		fileInput.close();
+	}
+
+
+	void MicroProgram::compile(CharStream& microProgramCodeStream) {
 		//initialize token buffer
 		std::vector<char> tokenBuffer;
 
 		//initialize micro code builder
-		MicroCodeBuilder codeBuilder(memory, startingPoint);
+		MicroCodeBuilder codeBuilder(memory, firstFree, labels, unresolvedLabels);
 		char input;
 
 		//check for control token
 		while (input = microProgramCodeStream.get()) {
-			if (isWhiteSpace(input)) {
+			if (isspace(input)) {
 				continue;
 			}
 
@@ -356,32 +377,19 @@ namespace MiMa {
 	}
 
 
-	//Interface: read input from a pointer to a char array containing the code for the program.
-	void readInput(std::uint32_t* memory, char* microProgramCode, uint8_t startingPoint) {
-		MIMA_LOG_INFO("Compiling microprogram from given code string");
-
-		BufferedCharStream microProgramCodeStream(microProgramCode);
-		readInput(memory, microProgramCodeStream, startingPoint);
-	}
-
-	//Interface: read input from an inputstream providing the code for the program.
-	void readInput(std::uint32_t* memory, std::istream& microProgramCode, uint8_t startingPoint) {
-		MIMA_LOG_INFO("Starting microprogram compilation");
-		
-		InputCharStream microProgramCodeStream(microProgramCode);
-		readInput(memory, microProgramCodeStream, startingPoint);
+	std::shared_ptr<uint32_t[]> MicroProgram::getMemory() {
+		MIMA_ASSERT_WARN(unresolvedLabels.empty(), "Microprogram memory with unresolved labels has been requested");
+		return memory;
 	}
 
 
-	//Interface: read input from a file containing the code for the program.
-	void readFile(uint32_t* memory, const char* fileName, uint8_t startingPoint) {
-		MIMA_LOG_INFO("Compiling microprogram from file '{}'", fileName);
+	void MicroProgram::printLabels() const {
+		for (auto const& [label, loc] : labels) {
+			MIMA_LOG_INFO("Found label: {} at 0x{:02X}", label, loc);
+		}
+	}
 
-		std::ifstream fileInput;
-		fileInput.open(fileName);
-
-		readInput(memory, fileInput, startingPoint);
-
-		fileInput.close();
+	void MicroProgram::printCompileStart() const {
+		MIMA_LOG_INFO("Compilation start is at 0x{:02X}", firstFree);
 	}
 }

@@ -1,36 +1,14 @@
 #pragma once
 
 #include <string>
+#include <memory>
 
+#include "StatusBit.h"
+#include "MicroProgram.h"
 #include "util/MinType.h"
 #include "util/Bitfield.h"
 
-#define BIT(n) (1 << n)
-
 namespace MiMa {
-	static const enum StatusBit : uint32_t {
-		FOLLOWING_ADDRESS = 0xFF,
-		RESERVED = 0x300,
-		STORAGE_WRITING = BIT(10),
-		STORAGE_READING = BIT(11),
-		ALU_C = 0x7000,
-		SAR_READING = BIT(15),
-		SDR_WRITING = BIT(16),
-		SDR_READING = BIT(17),
-		IR_WRITING = BIT(18),
-		IR_READING = BIT(19),
-		IAR_WRITING = BIT(20),
-		IAR_READING = BIT(21),
-		ONE = BIT(22),
-		ALU_RESULT = BIT(23),
-		ALU_RIGHT_OPERAND = BIT(24),
-		ALU_LEFT_OPERAND = BIT(25),
-		ACCUMULATOR_WRITING = BIT(26),
-		ACCUMULATOR_READING = BIT(27),
-		DECODING = 0xF0000000
-	};
-
-
 	struct MemoryCell {
 		uint32_t data : 24;
 		uint32_t debug : 8;
@@ -82,8 +60,8 @@ namespace MiMa {
 		Data storageDataRegister : DATA_SIZE;
 
 		//Exchangable MiMa components:
-		uint32_t* instructionDecoder;
-		uint32_t(*decodingFunction)(const uint8_t&, const uint8_t&, const uint8_t&); //arguments: decoding value, opCode, ptr to instructionDecoderState
+		std::shared_ptr<uint32_t[]> instructionDecoder;
+		uint32_t(*decodingFunction)(const uint8_t&, const uint8_t&, const uint8_t&); //arguments: decoding value, opCode, instructionDecoderState
 		MemoryCell* memory;
 
 		//MiMa state:
@@ -91,8 +69,9 @@ namespace MiMa {
 		uint8_t instructionDecoderState;
 		MemoryState memoryState;
 	public:
-		MinimalMachine(uint32_t* instructionDecoder, uint32_t(*decodingFunction)(const uint8_t&, const uint8_t&, const uint8_t&), MemoryCell memory[MEMORY_CAPACITY]);
+		MinimalMachine(std::shared_ptr<uint32_t[]>& instructionDecoder, uint32_t(*decodingFunction)(const uint8_t&, const uint8_t&, const uint8_t&), MemoryCell memory[MEMORY_CAPACITY]);
 
+		//emulate minimal machine
 		void emulateClockCycle();
 		void emulateInstructionCycle();
 		void emulateLifeTime();

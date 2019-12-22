@@ -18,7 +18,7 @@ std::string trueFalse(const int& value) {
 
 
 namespace MiMa {
-	MinimalMachine::MinimalMachine(uint32_t* instructionDecoder, uint32_t(*decodingFunction)(const uint8_t&, const uint8_t&, const uint8_t&), MemoryCell memory[MEMORY_CAPACITY]) :
+	MinimalMachine::MinimalMachine(std::shared_ptr<uint32_t[]>& instructionDecoder, uint32_t(*decodingFunction)(const uint8_t&, const uint8_t&, const uint8_t&), MemoryCell memory[MEMORY_CAPACITY]) :
 		//registers
 		accumulator({ 0 }),
 		instructionAddressRegister(0),

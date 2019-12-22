@@ -44,10 +44,9 @@ uint32_t decodeInstructionJump(const uint8_t&, const uint8_t& opCode, const uint
 int main() {
 	MiMa::mimaDefaultLog.setLogLevel(spdlog::level::level_enum::info);
 
-	std::unique_ptr<uint32_t[]> instructionDecoder = std::make_unique<uint32_t[]>(256);
 	std::unique_ptr<MiMa::MemoryCell[]> memory = std::make_unique<MiMa::MemoryCell[]>(MiMa::MinimalMachine::MEMORY_CAPACITY);
 
-	char* input =
+	char* instructionDecoderCode =
 		"start: IAR > SAR; IAR > X; R = 1;;\n"
 		"ONE > Y; R = 1;;\n"
 		"ALU = ADD; R = 1;;\n"
@@ -72,18 +71,20 @@ int main() {
 		"ACCU > X; R = 1;;\n"
 		"R = 1;;\n"
 		"SDR > Y; ALU = AND; #ret;;\n";
-	MiMa::readInput(instructionDecoder.get(), input);
+	MiMa::MicroProgram microprogram;
+	microprogram.compile(instructionDecoderCode);
+	std::shared_ptr<uint32_t[]> instructionDecoder = microprogram.getMemory();
 
 	memory[0x00] = { 0x000000FF };
 	memory[0x01] = { 0x00300020 };
 	memory[0x02] = { 0x00F00000 };
 	memory[0x20] = { 0x00000003 };
 
-	MiMa::MinimalMachine mima(instructionDecoder.get(), decodeInstructionJump, memory.get());
+	MiMa::MinimalMachine mima(instructionDecoder, decodeInstructionJump, memory.get());
 	mima.printState();
 	
 	mima.emulateLifeTime();
-	//mima.printState();
-
+	mima.printState();
+	
 	return 0;
 }
