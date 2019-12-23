@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 #define BIT(n) (1 << n)
 
 namespace MiMa {

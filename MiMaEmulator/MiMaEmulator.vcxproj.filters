@@ -33,6 +33,8 @@
     <ClInclude Include="src\util\MinType.h">
       <Filter>util</Filter>
     </ClInclude>
+    <ClInclude Include="src\mima\StatusBit.h" />
+    <ClInclude Include="src\mima\MicroProgramCompiler.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Main.cpp" />
@@ -48,5 +50,6 @@
     <ClCompile Include="src\mima\MinimalMachine.cpp">
       <Filter>mima</Filter>
     </ClCompile>
+    <ClCompile Include="src\mima\MicroProgramCompiler.cpp" />
   </ItemGroup>
 </Project>
