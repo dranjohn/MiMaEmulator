@@ -7,8 +7,12 @@
 #include "MicroProgram.h"
 #include "util/MinType.h"
 #include "util/Bitfield.h"
+#include "debug/Log.h"
 
 namespace MiMa {
+	typedef uint32_t(*InstructionDecodeFunction)(const uint8_t&, const uint8_t&); //arguments: decoding value, opCode
+
+
 	struct MemoryCell {
 		uint32_t data : 24;
 		uint32_t debug : 8;
@@ -61,7 +65,7 @@ namespace MiMa {
 
 		//Exchangable MiMa components:
 		std::shared_ptr<uint32_t[]> instructionDecoder;
-		uint32_t(*decodingFunction)(const uint8_t&, const uint8_t&, const uint8_t&); //arguments: decoding value, opCode, instructionDecoderState
+		InstructionDecodeFunction decodingFunction;
 		MemoryCell* memory;
 
 		//MiMa state:
@@ -69,7 +73,8 @@ namespace MiMa {
 		uint8_t instructionDecoderState;
 		MemoryState memoryState;
 	public:
-		MinimalMachine(std::shared_ptr<uint32_t[]>& instructionDecoder, uint32_t(*decodingFunction)(const uint8_t&, const uint8_t&, const uint8_t&), MemoryCell memory[MEMORY_CAPACITY]);
+		MinimalMachine(std::shared_ptr<uint32_t[]>& instructionDecoder, InstructionDecodeFunction decodingFunction, MemoryCell memory[MEMORY_CAPACITY]);
+		~MinimalMachine() { MIMA_LOG_INFO("Destructed MiMa"); }
 
 		//emulate minimal machine
 		void emulateClockCycle();

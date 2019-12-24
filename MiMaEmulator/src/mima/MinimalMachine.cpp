@@ -1,6 +1,5 @@
 #include "MinimalMachine.h"
 
-#include "debug/Log.h"
 #include "debug/LogFormat.h"
 
 #define READ_MIMA_REGISTER(sb, mc, db, reg) if (StatusBit::sb & mc) db |= reg
@@ -18,7 +17,7 @@ std::string trueFalse(const int& value) {
 
 
 namespace MiMa {
-	MinimalMachine::MinimalMachine(std::shared_ptr<uint32_t[]>& instructionDecoder, uint32_t(*decodingFunction)(const uint8_t&, const uint8_t&, const uint8_t&), MemoryCell memory[MEMORY_CAPACITY]) :
+	MinimalMachine::MinimalMachine(std::shared_ptr<uint32_t[]>& instructionDecoder, InstructionDecodeFunction decodingFunction, MemoryCell memory[MEMORY_CAPACITY]) :
 		//registers
 		accumulator({ 0 }),
 		instructionAddressRegister(0),
@@ -37,7 +36,7 @@ namespace MiMa {
 		instructionDecoderState(0),
 		memoryState({ 0, 0 })
 	{
-		MIMA_LOG_INFO("Initializing MiMa");
+		MIMA_LOG_INFO("Initialized MiMa");
 	}
 
 
@@ -51,10 +50,11 @@ namespace MiMa {
 
 		MIMA_LOG_TRACE("Found microprogram instruction 0x{:08X}", microCode);
 
-		if (decoding > 0) {
+		if (decoding > 0 && decoding != HALT_BITS) {
 			MIMA_LOG_TRACE("Found decoding state 0x{:02X}", decoding);
 
-			microCode = decodingFunction(decoding, opCode, instructionDecoderState);
+			microCode = decodingFunction(decoding, opCode);
+			decoding = (microCode & StatusBit::DECODING) >> 28;
 		}
 
 		MIMA_LOG_TRACE("Found operation code 0x{:02X}", opCode);
@@ -163,7 +163,10 @@ namespace MiMa {
 
 		//step to next register transfer
 		uint8_t nextInstructionDecoderState = microCode & StatusBit::FOLLOWING_ADDRESS;
-		if (nextInstructionDecoderState == instructionDecoderState) {
+		if (nextInstructionDecoderState == instructionDecoderState || decoding == HALT_BITS) {
+			MIMA_ASSERT_TRACE(nextInstructionDecoderState != instructionDecoderState, "Halted MiMa due to instruction repitition");
+			MIMA_ASSERT_TRACE(decoding != HALT_BITS, "Halted MiMa due to halt code in microprogram");
+
 			running = false;
 		}
 		instructionDecoderState = nextInstructionDecoderState;

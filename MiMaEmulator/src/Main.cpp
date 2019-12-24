@@ -6,7 +6,8 @@
 #include "mima/MinimalMachine.h"
 #include "debug/Log.h"
 
-uint32_t decodeInstructionJump(const uint8_t&, const uint8_t& opCode, const uint8_t& instructionDecoderState) {
+
+uint32_t decodeInstructionJump(const uint8_t&, const uint8_t& opCode) {
 	uint8_t shortOpCode = (opCode & 0xF0) >> 4;
 	
 	uint32_t nextAddress = 0;
@@ -15,7 +16,7 @@ uint32_t decodeInstructionJump(const uint8_t&, const uint8_t& opCode, const uint
 
 		switch (opCodeExtension) {
 		case 0:
-			return instructionDecoderState;
+			return MiMa::HALT_CODE;
 		}
 	}
 	else { //use shortOpCode

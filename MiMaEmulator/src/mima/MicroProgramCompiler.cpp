@@ -220,6 +220,11 @@ namespace MiMa {
 
 			//if the token starts with the jump symbol, treat it as a jump instruction
 			if (*token == JUMP) {
+				if (operatorBufferOccupied) {
+					MIMA_LOG_INFO("Discarding binary operator followed by jump instruction to {}", token);
+					operatorBufferOccupied = false;
+				}
+
 				if (fixedJump) {
 					MIMA_LOG_WARN("Found multiple jump instruction in one line of microprogram code, ignoring jump instruction to '{}'", token);
 					break;
@@ -241,6 +246,17 @@ namespace MiMa {
 
 				//mark this instruction as having a fixed jump location
 				fixedJump = true;
+				break;
+			}
+
+			//if the token is the halt instruction, add the halt code
+			if (token == "HALT") {
+				if (operatorBufferOccupied) {
+					MIMA_LOG_INFO("Discarding binary operator followed by halt instruction");
+					operatorBufferOccupied = false;
+				}
+
+				currentCode |= HALT_CODE;
 				break;
 			}
 
