@@ -97,6 +97,7 @@
     <ClInclude Include="src\mima\MicroProgramCompiler.h" />
     <ClInclude Include="src\mima\MinimalMachine.h" />
     <ClInclude Include="src\mima\StatusBit.h" />
+    <ClInclude Include="src\util\BinaryOperatorBuffer.h" />
     <ClInclude Include="src\util\BitField.h" />
     <ClInclude Include="src\util\CharStream.h" />
     <ClInclude Include="src\util\MinType.h" />

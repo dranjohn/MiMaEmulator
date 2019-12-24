@@ -9,10 +9,11 @@
 #include <istream>
 
 #include "debug/Log.h"
+#include "util/BinaryOperatorBuffer.h"
 
 namespace MiMa {
 	//Utility: binary operators understandable by the micro program compiler
-	typedef uint32_t(*BinaryOperator)(std::string, std::string);
+	typedef uint32_t(*BinaryOperator)(const std::string&, const std::string&);
 
 	class MicroProgramCompiler {
 	private:
@@ -20,6 +21,14 @@ namespace MiMa {
 		protected:
 			MicroProgramCompiler& compiler;
 			Scope(MicroProgramCompiler& compiler) : compiler(compiler) {}
+
+			//adds a new label and resolves unresolved jumps to the given label
+			void addLabel(std::string label);
+			//adds a jump instruction to the current microcode
+			void addJump(std::string label, bool& fixedJump, uint32_t& currentCode);
+
+			//ends the current line
+			void endOfLine(bool& fixedJump, uint32_t& currentCode);
 		public:
 			virtual bool isControl(const char& control) = 0;
 			virtual void addToken(const char& control, char* token) = 0;
@@ -53,9 +62,7 @@ namespace MiMa {
 			uint32_t currentCode = 0;
 
 			//binary operator buffers
-			std::string bufferedOperand;
-			BinaryOperator bufferedOperator;
-			bool operatorBufferOccupied = false;
+			BinaryOperatorBuffer<std::string, uint32_t> operatorBuffer;
 		public:
 			GlobalScope(MicroProgramCompiler& compiler);
 

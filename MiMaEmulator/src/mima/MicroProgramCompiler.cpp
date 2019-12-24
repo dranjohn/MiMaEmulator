@@ -3,6 +3,10 @@
 #include "StatusBit.h"
 
 namespace MiMa {
+	// ---------------
+	// Utility methods
+	// ---------------
+
 	//Utility: constants for compiling
 	constexpr uint8_t JUMP_MASK = 0xFF;
 	constexpr uint32_t uint32_t_0 = 0;
@@ -94,10 +98,11 @@ namespace MiMa {
 		return 0;
 	}
 
-	BinaryOperator MOVE_OPERATOR = [](std::string leftOperand, std::string rightOperand) {
+	//Utility: predefined binary operators in compilation
+	BinaryOperator MOVE_OPERATOR = [](const std::string& leftOperand, const std::string& rightOperand) {
 		return getWriteBit(leftOperand) | getReadBit(rightOperand);
 	};
-	BinaryOperator SET_OPERATOR = [](std::string leftOperand, std::string rightOperand) {
+	BinaryOperator SET_OPERATOR = [](const std::string& leftOperand, const std::string& rightOperand) {
 		if (leftOperand == "R") {
 			if (rightOperand == "1") {
 				return static_cast<typename std::underlying_type<StatusBit>::type>(StatusBit::STORAGE_READING);
@@ -117,20 +122,7 @@ namespace MiMa {
 		}
 
 		if (leftOperand == "D") {
-			char* value = rightOperand.data();
-			uint32_t finalValue = 0;
-
-			while (*value != NULL) {
-				char digit = *value;
-				value++;
-
-				if (!isdigit(digit)) {
-					return uint32_t_0;
-				}
-
-				finalValue *= 10;
-				finalValue += (digit - char_0);
-			}
+			uint32_t finalValue = (uint32_t)std::stoi(rightOperand);
 
 			finalValue &= 0xF;
 			finalValue = finalValue << 28;
@@ -147,9 +139,75 @@ namespace MiMa {
 
 
 
+	// -----------------------
+	// Scope utility functions
+	// -----------------------
+
+	void MicroProgramCompiler::Scope::addLabel(std::string label) {
+		MIMA_LOG_TRACE("Found label '{}' at address 0x{:02X}", label, compiler.firstFree);
+
+		//add the label to the list of found labels
+		MIMA_ASSERT_ERROR(compiler.labels.find(label) == compiler.labels.end(), "Found duplicate of label {}, using second label found from now on", label);
+		compiler.labels.insert({ label, compiler.firstFree });
+
+		//resolve any unresolved jumps to this label
+		std::multimap<std::string, uint8_t>::iterator unresolvedLabelLocations = compiler.unresolvedLabels.find(label);
+
+		if (unresolvedLabelLocations != compiler.unresolvedLabels.end()) {
+			while (unresolvedLabelLocations->first == label) {
+				compiler.memory[unresolvedLabelLocations->second] &= ~JUMP_MASK;
+				compiler.memory[unresolvedLabelLocations->second] |= compiler.firstFree;
+
+				unresolvedLabelLocations++;
+
+				MIMA_LOG_TRACE("Resolved jump from 0x{:02X} to 0x{:02X}", unresolvedLabelLocations->second, compiler.firstFree);
+			}
+		}
+	}
+
+	void MicroProgramCompiler::Scope::addJump(std::string label, bool& fixedJump, uint32_t& currentCode) {
+		//find label location (ignoring the jump marker)
+		std::map<std::string, uint8_t>::iterator labelLocation = compiler.labels.find(label);
+
+		if (labelLocation != compiler.labels.end()) { //label found
+			MIMA_LOG_TRACE("Found microprogram jump instruction from 0x{:02X} to 0x{:02X}", compiler.firstFree, labelLocation->second);
+			currentCode &= ~JUMP_MASK;
+			currentCode |= labelLocation->second;
+		}
+		else { //label not found, add this to unresolved references
+			MIMA_LOG_TRACE("Found unresolved microprogram jump from 0x{:02X}", compiler.firstFree);
+			compiler.unresolvedLabels.insert({ label, compiler.firstFree });
+		}
+
+		//mark this instruction as having a fixed jump location
+		fixedJump = true;
+	}
+
+
+	void MicroProgramCompiler::Scope::endOfLine(bool& fixedJump, uint32_t& currentCode) {
+		if (!fixedJump) {
+			MIMA_LOG_TRACE("Setting automatic jump to next address 0x{:02X} for microprogram instruction 0x{:08X}", compiler.firstFree + 1, currentCode);
+			currentCode |= (compiler.firstFree + 1);
+		}
+
+		compiler.memory[compiler.firstFree] = currentCode;
+		MIMA_LOG_TRACE("Compiled microcode 0x{:08X}, stored at 0x{:02X}", currentCode, compiler.firstFree);
+
+		fixedJump = false;
+		compiler.firstFree++;
+		MIMA_ASSERT_WARN(compiler.firstFree != 0, "Memory position overflow in compilation, continuing to compile at 0x00.");
+		currentCode = 0;
+	}
+
+
+
+	// -----------------------------------------
+	// Global scope of the microprogram compiler
+	// -----------------------------------------
+	
 	MicroProgramCompiler::GlobalScope::GlobalScope(MicroProgramCompiler& compiler) :
 		Scope(compiler),
-		bufferedOperator([](std::string, std::string) { return uint32_t_0; })
+		operatorBuffer(std::string(""), [](const std::string&, const std::string&) { return uint32_t_0; })
 	{}
 
 
@@ -163,66 +221,31 @@ namespace MiMa {
 	void MicroProgramCompiler::GlobalScope::addToken(const char& control, char* token) {
 		switch (control) {
 		case LABEL:
-		{
-			MIMA_LOG_TRACE("Found label '{}' at address 0x{:02X}", token, compiler.firstFree);
-			//add the label to the list of found labels
-			std::string label(token);
-			compiler.labels.insert({ label, compiler.firstFree });
-
-			//resolve any unresolved jumps to this label
-			std::multimap<std::string, uint8_t>::iterator unresolvedLabelLocations = compiler.unresolvedLabels.find(label);
-
-			if (unresolvedLabelLocations != compiler.unresolvedLabels.end()) {
-				while (unresolvedLabelLocations->first == label) {
-					compiler.memory[unresolvedLabelLocations->second] &= ~JUMP_MASK;
-					compiler.memory[unresolvedLabelLocations->second] |= compiler.firstFree;
-
-					unresolvedLabelLocations++;
-
-					MIMA_LOG_TRACE("Resolved jump from 0x{:02X} to 0x{:02X}", unresolvedLabelLocations->second, compiler.firstFree);
-				}
-			}
-		}
-		break;
+			Scope::addLabel(token);
+			break;
 
 		case MOVE:
 			//prepare for second operand of move instruction in next addToken() call
-			bufferedOperand = std::string(token);
-			bufferedOperator = MOVE_OPERATOR;
-			operatorBufferOccupied = true;
+			operatorBuffer.buffer(token, MOVE_OPERATOR);
 			break;
 
 		case SET:
 			//prepare for second operand of set instruction in next addToken() call
-			bufferedOperand = std::string(token);
-			bufferedOperator = SET_OPERATOR;
-			operatorBufferOccupied = true;
+			operatorBuffer.buffer(token, SET_OPERATOR);
 			break;
 
 		case BREAK:
 			//if the token is empty, the break operator stands for end-of-line
 			if (*token == 0) {
-				if (!fixedJump) {
-					MIMA_LOG_TRACE("Setting automatic jump to next address 0x{:02X} for microprogram instruction 0x{:08X}", compiler.firstFree + 1, currentCode);
-					currentCode |= (compiler.firstFree + 1);
-				}
-
-				compiler.memory[compiler.firstFree] = currentCode;
-				MIMA_LOG_TRACE("Compiled microcode 0x{:08X}, stored at 0x{:02X}", currentCode, compiler.firstFree);
-
-				fixedJump = false;
-				compiler.firstFree++;
-				MIMA_ASSERT_WARN(compiler.firstFree != 0, "Memory position overflow in compilation, continuing to compile at 0x00.");
-				currentCode = 0;
-
+				Scope::endOfLine(fixedJump, currentCode);
 				break;
 			}
 
 			//if the token starts with the jump symbol, treat it as a jump instruction
 			if (*token == JUMP) {
-				if (operatorBufferOccupied) {
+				if (operatorBuffer.isBufferOccupied()) {
 					MIMA_LOG_INFO("Discarding binary operator followed by jump instruction to {}", token);
-					operatorBufferOccupied = false;
+					operatorBuffer.discardBuffer();
 				}
 
 				if (fixedJump) {
@@ -230,44 +253,25 @@ namespace MiMa {
 					break;
 				}
 
-				//find label location (ignoring the jump marker)
-				std::string label(token + 1);
-				std::map<std::string, uint8_t>::iterator labelLocation = compiler.labels.find(label);
-
-				if (labelLocation != compiler.labels.end()) { //label found
-					MIMA_LOG_TRACE("Found microprogram jump instruction from 0x{:02X} to 0x{:02X}", compiler.firstFree, labelLocation->second);
-					currentCode &= ~JUMP_MASK;
-					currentCode |= labelLocation->second;
-				}
-				else { //label not found, add this to unresolved references
-					MIMA_LOG_TRACE("Found unresolved microprogram jump from 0x{:02X}", compiler.firstFree);
-					compiler.unresolvedLabels.insert({ token, compiler.firstFree });
-				}
-
-				//mark this instruction as having a fixed jump location
-				fixedJump = true;
+				Scope::addJump(token + 1, fixedJump, currentCode);
 				break;
 			}
 
 			//if the token is the halt instruction, add the halt code
 			if (token == "HALT") {
-				if (operatorBufferOccupied) {
+				if (operatorBuffer.isBufferOccupied()) {
 					MIMA_LOG_INFO("Discarding binary operator followed by halt instruction");
-					operatorBufferOccupied = false;
+					operatorBuffer.discardBuffer();
 				}
 
 				currentCode |= HALT_CODE;
 				break;
 			}
 
-			MIMA_ASSERT_WARN(operatorBufferOccupied, "Found token '{}' with no preceeding binary operator", token);
-			if (operatorBufferOccupied) {
+			MIMA_ASSERT_WARN(operatorBuffer.isBufferOccupied(), "Found token '{}' with no preceeding binary operator", token);
+			if (operatorBuffer.isBufferOccupied()) {
 				//execute binary operation
-				std::string operand(token);
-				currentCode |= bufferedOperator(bufferedOperand, operand);
-
-				bufferedOperand = std::string();
-				operatorBufferOccupied = false;
+				currentCode |= operatorBuffer.apply(token);
 			}
 			break;
 		default:
@@ -278,7 +282,7 @@ namespace MiMa {
 
 
 	void MicroProgramCompiler::GlobalScope::finish(char* finish) {
-		MIMA_ASSERT_ERROR(!operatorBufferOccupied, "Binary operator remaining after finishing compilation with operand '{}'", bufferedOperand);
+		MIMA_ASSERT_ERROR(!operatorBuffer.isBufferOccupied(), "Binary operator remaining after finishing compilation with remaining operand");
 		MIMA_ASSERT_ERROR(currentCode == 0, "Failed to write last line in compilation 0x({:08X}) into dedicated memory position 0x{:02X}", currentCode, compiler.firstFree);
 	}
 
@@ -297,6 +301,10 @@ namespace MiMa {
 	}
 
 
+
+	// ---------------------
+	// Microprogram compiler
+	// ---------------------
 
 	MicroProgramCompiler::MicroProgramCompiler(std::shared_ptr<uint32_t[]>& memory, uint8_t& startingPoint, std::map<std::string, uint8_t>& labels, std::multimap<std::string, uint8_t>& unresolvedLabels) :
 		memory(memory),

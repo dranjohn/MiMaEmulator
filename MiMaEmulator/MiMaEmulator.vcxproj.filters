@@ -35,6 +35,7 @@
     </ClInclude>
     <ClInclude Include="src\mima\StatusBit.h" />
     <ClInclude Include="src\mima\MicroProgramCompiler.h" />
+    <ClInclude Include="src\util\BinaryOperatorBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Main.cpp" />
