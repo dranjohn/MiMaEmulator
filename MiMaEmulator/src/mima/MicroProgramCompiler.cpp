@@ -31,13 +31,12 @@ namespace MiMa {
 	}
 
 	//Utility: control symbols
-	constexpr char LABEL = ':';
-	constexpr char JUMP = '#';
-	constexpr char MOVE = '>';
-	constexpr char SET = '=';
-	constexpr char BREAK = ';';
-	constexpr char OPEN_SCOPE = '{';
-	constexpr char CLOSE_SCOPE = '}';
+	constexpr char char_LABEL = ':';
+	constexpr char char_JUMP = '#';
+	constexpr char char_MOVE = '>';
+	constexpr char char_SET = '=';
+	constexpr char char_BREAK = ';';
+	constexpr char char_COMPILER_DIRECTIVE = '!';
 
 	//Utility: ALU codes
 	uint32_t getALUCode(const std::string& input) {
@@ -205,36 +204,36 @@ namespace MiMa {
 	// Global scope of the microprogram compiler
 	// -----------------------------------------
 	
-	MicroProgramCompiler::GlobalScope::GlobalScope(MicroProgramCompiler& compiler) :
+	MicroProgramCompiler::DefaultScope::DefaultScope(MicroProgramCompiler& compiler) :
 		Scope(compiler),
 		operatorBuffer(std::string(""), [](const std::string&, const std::string&) { return uint32_t_0; })
 	{}
 
 
-	bool MicroProgramCompiler::GlobalScope::isControl(const char& control) {
-		return control == LABEL
-			|| control == MOVE
-			|| control == SET
-			|| control == BREAK;
+	bool MicroProgramCompiler::DefaultScope::isControl(const char& control) {
+		return control == char_LABEL
+			|| control == char_MOVE
+			|| control == char_SET
+			|| control == char_BREAK;
 	}
 
-	void MicroProgramCompiler::GlobalScope::addToken(const char& control, char* token) {
+	void MicroProgramCompiler::DefaultScope::addToken(const char& control, char* token) {
 		switch (control) {
-		case LABEL:
+		case char_LABEL:
 			Scope::addLabel(token);
 			break;
 
-		case MOVE:
+		case char_MOVE:
 			//prepare for second operand of move instruction in next addToken() call
 			operatorBuffer.buffer(token, MOVE_OPERATOR);
 			break;
 
-		case SET:
+		case char_SET:
 			//prepare for second operand of set instruction in next addToken() call
 			operatorBuffer.buffer(token, SET_OPERATOR);
 			break;
 
-		case BREAK:
+		case char_BREAK:
 			//if the token is empty, the break operator stands for end-of-line
 			if (*token == 0) {
 				Scope::endOfLine(fixedJump, currentCode);
@@ -242,7 +241,7 @@ namespace MiMa {
 			}
 
 			//if the token starts with the jump symbol, treat it as a jump instruction
-			if (*token == JUMP) {
+			if (*token == char_JUMP) {
 				if (operatorBuffer.isBufferOccupied()) {
 					MIMA_LOG_INFO("Discarding binary operator followed by jump instruction to {}", token);
 					operatorBuffer.discardBuffer();
@@ -281,23 +280,13 @@ namespace MiMa {
 	}
 
 
-	void MicroProgramCompiler::GlobalScope::finish(char* finish) {
+	void MicroProgramCompiler::DefaultScope::cleanUpScope() {
+		MIMA_LOG_TRACE("Cleaning up default compiler scope");
+	}
+
+	void MicroProgramCompiler::DefaultScope::finish(char* finish) {
 		MIMA_ASSERT_ERROR(!operatorBuffer.isBufferOccupied(), "Binary operator remaining after finishing compilation with remaining operand");
 		MIMA_ASSERT_ERROR(currentCode == 0, "Failed to write last line in compilation 0x({:08X}) into dedicated memory position 0x{:02X}", currentCode, compiler.firstFree);
-	}
-
-
-	bool MicroProgramCompiler::GlobalScope::canOpenScope(char* scopeName) {
-		return false;
-	}
-
-	MicroProgramCompiler::Scope* MicroProgramCompiler::GlobalScope::openScope(char* scopeName) {
-		MIMA_LOG_ERROR("Failed to open scope '{}'", scopeName);
-		return nullptr;
-	}
-
-	void MicroProgramCompiler::GlobalScope::cleanUpScope() {
-		MIMA_LOG_ERROR("Closed global scope");
 	}
 
 
@@ -312,37 +301,24 @@ namespace MiMa {
 		labels(labels),
 		unresolvedLabels(unresolvedLabels)
 	{
-		scopeStack.push(std::make_unique<GlobalScope>(*this));
+		currentScope.reset(new DefaultScope(*this));
 		MIMA_LOG_INFO("Initialized microcode builder, starting compilation at 0x{:02X}", startingPoint);
 	};
 
 
 	bool MicroProgramCompiler::isControl(const char& control) {
 		//check if a char is a control character usable for addToken()
-		return scopeStack.top()->isControl(control);
+		return control == char_COMPILER_DIRECTIVE
+			|| currentScope->isControl(control);
 	}
 
 	void MicroProgramCompiler::addToken(const char& control, char* token) {
-		if (*token == OPEN_SCOPE) {
-			MIMA_ASSERT_ERROR(scopeStack.top()->canOpenScope(token), "Can't open scope '{}' on top of current scope", token);
-
-			if (scopeStack.top()->canOpenScope(token)) {
-				scopeStack.push(std::unique_ptr<Scope>());
-			}
-
-			return;
-		}
-		if (*token == CLOSE_SCOPE) {
-			if (scopeStack.size() == 1) {
-				MIMA_LOG_WARN("Attempted to close global scope");
-				return;
-			}
-
-			scopeStack.pop();
+		if (control == char_COMPILER_DIRECTIVE) {
+			MIMA_LOG_ERROR("Discarding unknwon compiler directive '{}'", token);
 			return;
 		}
 
-		scopeStack.top()->addToken(control, token);
+		currentScope->addToken(control, token);
 	}
 
 
