@@ -50,11 +50,11 @@ namespace MiMa {
 
 		MIMA_LOG_TRACE("Found microprogram instruction 0x{:08X}", microCode);
 
-		if (decoding > 0 && decoding != HALT_BITS) {
+		if (decoding > 0) {
 			MIMA_LOG_TRACE("Found decoding state 0x{:02X}", decoding);
 
 			microCode = decodingFunction(decoding, opCode);
-			decoding = (microCode & StatusBit::DECODING) >> 28;
+			MIMA_LOG_TRACE("New microcode is 0x{:08X}", microCode);
 		}
 
 		MIMA_LOG_TRACE("Found operation code 0x{:02X}", opCode);
@@ -163,10 +163,8 @@ namespace MiMa {
 
 		//step to next register transfer
 		uint8_t nextInstructionDecoderState = microCode & StatusBit::FOLLOWING_ADDRESS;
-		if (nextInstructionDecoderState == instructionDecoderState || decoding == HALT_BITS) {
-			MIMA_ASSERT_TRACE(nextInstructionDecoderState != instructionDecoderState, "Halted MiMa due to instruction repitition");
-			MIMA_ASSERT_TRACE(decoding != HALT_BITS, "Halted MiMa due to halt code in microprogram");
-
+		if (nextInstructionDecoderState == instructionDecoderState) {
+			MIMA_LOG_TRACE("Halted MiMa due to instruction repitition");
 			running = false;
 		}
 		instructionDecoderState = nextInstructionDecoderState;

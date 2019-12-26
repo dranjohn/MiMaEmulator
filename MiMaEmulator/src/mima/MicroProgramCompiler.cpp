@@ -277,7 +277,8 @@ namespace MiMa {
 					operatorBuffer.discardBuffer();
 				}
 
-				currentCode |= HALT_CODE;
+				currentCode &= ~JUMP_MASK;
+				currentCode |= 0xFF;
 				break;
 			}
 

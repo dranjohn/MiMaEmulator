@@ -26,7 +26,4 @@ namespace MiMa {
 		ACCUMULATOR_READING = BIT(27),
 		DECODING = 0xF0000000
 	};
-
-	constexpr uint32_t HALT_BITS = 0xF;
-	constexpr uint32_t HALT_CODE = HALT_BITS << 28;
 }

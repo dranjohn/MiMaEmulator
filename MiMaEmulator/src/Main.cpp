@@ -16,7 +16,7 @@ uint32_t decodeInstructionJump(const uint8_t&, const uint8_t& opCode) {
 
 		switch (opCodeExtension) {
 		case 0:
-			return MiMa::HALT_CODE;
+			return 0xFF;
 		}
 	}
 	else { //use shortOpCode

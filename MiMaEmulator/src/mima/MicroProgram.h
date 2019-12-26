@@ -12,6 +12,8 @@
 namespace MiMa {
 	class MicroProgram {
 	private:
+		static const uint8_t HALT_RESERVED = 0xFF;
+
 		//program memory
 		std::shared_ptr<uint32_t[]> memory;
 		uint8_t firstFree;

@@ -13,6 +13,8 @@ namespace MiMa {
 	MicroProgram::MicroProgram(const uint8_t& startingPoint) : memory(new uint32_t[256]) , firstFree(startingPoint) {
 		MIMA_LOG_INFO("Created microprogram starting at 0x{:02X}", startingPoint);
 		MIMA_LOG_WARN("Using the microprogram compiler is not thread-safe!");
+
+		memory[HALT_RESERVED] = HALT_RESERVED;
 	}
 
 
