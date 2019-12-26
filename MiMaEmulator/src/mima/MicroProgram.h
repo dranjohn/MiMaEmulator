@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <map>
+#include <functional>
 
 #include "util/CharStream.h"
 
@@ -17,7 +18,7 @@ namespace MiMa {
 
 		//labels
 		std::map<std::string, uint8_t> labels;
-		std::multimap<std::string, uint8_t> unresolvedLabels;
+		std::multimap<std::string, std::function<bool(const uint8_t&)>> labelAddListeners;
 	public:
 		MicroProgram(const uint8_t& startingPoint = 0);
 

@@ -51,7 +51,7 @@ namespace MiMa {
 		std::vector<char> tokenBuffer;
 
 		//initialize micro code builder
-		MicroProgramCompiler codeBuilder(memory, firstFree, labels, unresolvedLabels);
+		MicroProgramCompiler codeBuilder(memory, firstFree, labels, labelAddListeners);
 		char input;
 
 		//check for control token
@@ -84,7 +84,7 @@ namespace MiMa {
 
 
 	std::shared_ptr<uint32_t[]> MicroProgram::getMemory() {
-		MIMA_ASSERT_WARN(unresolvedLabels.empty(), "Microprogram memory with unresolved labels has been requested");
+		MIMA_ASSERT_WARN(labelAddListeners.empty(), "Microprogram memory with unresolved labels has been requested");
 		return memory;
 	}
 

@@ -7,6 +7,7 @@
 #include <map>
 #include <stack>
 #include <istream>
+#include <functional>
 
 #include "debug/Log.h"
 #include "util/BinaryOperatorBuffer.h"
@@ -25,7 +26,7 @@ namespace MiMa {
 			//adds a new label and resolves unresolved jumps to the given label
 			void addLabel(std::string label);
 			//adds a jump instruction to the current microcode
-			void addJump(std::string label, bool& fixedJump, uint32_t& currentCode);
+			void addJump(std::string label, bool& fixedJump, uint32_t& currentCode, bool overrideFixed = false);
 
 			//ends the current line
 			void endOfLine(bool& fixedJump, uint32_t& currentCode);
@@ -68,11 +69,9 @@ namespace MiMa {
 
 		//label tracking
 		std::map<std::string, uint8_t>& labels;
-		std::multimap<std::string, uint8_t>& unresolvedLabels;
-
-
+		std::multimap<std::string, std::function<bool(const uint8_t&)>>& labelAddListeners;
 	public:
-		MicroProgramCompiler(std::shared_ptr<uint32_t[]>& memory, uint8_t& startingPoint, std::map<std::string, uint8_t>& labels, std::multimap<std::string, uint8_t>& unresolvedLabels);
+		MicroProgramCompiler(std::shared_ptr<uint32_t[]>& memory, uint8_t& startingPoint, std::map<std::string, uint8_t>& labels, std::multimap<std::string, std::function<bool(const uint8_t&)>>& labelAddListeners);
 
 		bool isControl(const char& control);
 		void addToken(const char& control, char* token);

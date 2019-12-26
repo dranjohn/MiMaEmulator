@@ -149,22 +149,33 @@ namespace MiMa {
 		MIMA_ASSERT_ERROR(compiler.labels.find(label) == compiler.labels.end(), "Found duplicate of label {}, using second label found from now on", label);
 		compiler.labels.insert({ label, compiler.firstFree });
 
-		//resolve any unresolved jumps to this label
-		std::multimap<std::string, uint8_t>::iterator unresolvedLabelLocations = compiler.unresolvedLabels.find(label);
+		//call all listeners waiting for this label to be added
+		std::multimap<std::string, std::function<bool(const uint8_t&)>>::iterator labelAddListener = compiler.labelAddListeners.find(label);
 
-		if (unresolvedLabelLocations != compiler.unresolvedLabels.end()) {
-			while (unresolvedLabelLocations->first == label) {
-				compiler.memory[unresolvedLabelLocations->second] &= ~JUMP_MASK;
-				compiler.memory[unresolvedLabelLocations->second] |= compiler.firstFree;
+		if (labelAddListener == compiler.labelAddListeners.end()) {
+			return;
+		}
 
-				unresolvedLabelLocations++;
-
-				MIMA_LOG_TRACE("Resolved jump from 0x{:02X} to 0x{:02X}", unresolvedLabelLocations->second, compiler.firstFree);
+		while (labelAddListener->first == label) {
+			if ((labelAddListener->second)(compiler.firstFree)) {
+				labelAddListener = compiler.labelAddListeners.erase(labelAddListener);
 			}
+			else {
+				++labelAddListener;
+			}
+
+			MIMA_LOG_TRACE("Called listener for label at 0x{:02X}", compiler.firstFree);
 		}
 	}
 
-	void MicroProgramCompiler::Scope::addJump(std::string label, bool& fixedJump, uint32_t& currentCode) {
+	void MicroProgramCompiler::Scope::addJump(std::string label, bool& fixedJump, uint32_t& currentCode, bool overrideFixed) {
+		//confirm that this can jump instruction can be set
+		if (fixedJump && !overrideFixed) {
+			MIMA_LOG_WARN("Attempted to override fixed jump at position 0x{:02X}", compiler.firstFree);
+			return;
+		}
+		MIMA_ASSERT_TRACE(!fixedJump, "Overriding fixed jump at 0x{:02X}", compiler.firstFree);
+
 		//find label location (ignoring the jump marker)
 		std::map<std::string, uint8_t>::iterator labelLocation = compiler.labels.find(label);
 
@@ -175,7 +186,15 @@ namespace MiMa {
 		}
 		else { //label not found, add this to unresolved references
 			MIMA_LOG_TRACE("Found unresolved microprogram jump from 0x{:02X}", compiler.firstFree);
-			compiler.unresolvedLabels.insert({ label, compiler.firstFree });
+
+			uint8_t firstFreeCopy = compiler.firstFree;
+			std::shared_ptr<uint32_t[]>& memoryReference = compiler.memory;
+			std::function<bool(const uint8_t&)> x = [firstFreeCopy, memoryReference](const uint8_t& labelAddress) {
+				memoryReference[firstFreeCopy] &= ~JUMP_MASK;
+				memoryReference[firstFreeCopy] |= labelAddress;
+				
+				return true;
+			};
 		}
 
 		//mark this instruction as having a fixed jump location
@@ -247,11 +266,6 @@ namespace MiMa {
 					operatorBuffer.discardBuffer();
 				}
 
-				if (fixedJump) {
-					MIMA_LOG_WARN("Found multiple jump instruction in one line of microprogram code, ignoring jump instruction to '{}'", token);
-					break;
-				}
-
 				Scope::addJump(token + 1, fixedJump, currentCode);
 				break;
 			}
@@ -295,11 +309,11 @@ namespace MiMa {
 	// Microprogram compiler
 	// ---------------------
 
-	MicroProgramCompiler::MicroProgramCompiler(std::shared_ptr<uint32_t[]>& memory, uint8_t& startingPoint, std::map<std::string, uint8_t>& labels, std::multimap<std::string, uint8_t>& unresolvedLabels) :
+	MicroProgramCompiler::MicroProgramCompiler(std::shared_ptr<uint32_t[]>& memory, uint8_t& startingPoint, std::map<std::string, uint8_t>& labels, std::multimap<std::string, std::function<bool(const uint8_t&)>>& labelAddListeners) :
 		memory(memory),
 		firstFree(startingPoint),
 		labels(labels),
-		unresolvedLabels(unresolvedLabels)
+		labelAddListeners(labelAddListeners)
 	{
 		currentScope.reset(new DefaultScope(*this));
 		MIMA_LOG_INFO("Initialized microcode builder, starting compilation at 0x{:02X}", startingPoint);
