@@ -5,3 +5,7 @@ bin-int/
 
 # files
 *.user
+
+# log files
+*.log
+log/

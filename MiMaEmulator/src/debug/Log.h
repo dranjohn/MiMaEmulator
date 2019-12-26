@@ -5,13 +5,16 @@
 #include <spdlog/spdlog.h>
 
 namespace MiMa {
-	constexpr char* STANDARD_SPDLOG_PATTERN = "%^[%T] %n: %v%$";
+	constexpr spdlog::level::level_enum STANDARD_SPDLOG_DEFAULT_LEVEL = spdlog::level::level_enum::trace;
+	constexpr char* STANDARD_SPDLOG_STDOUT_PATTERN = "%^[%T] %n: %v%$";
+	constexpr char* STANDARD_SPDLOG_FILE_PATTERN = "[%L| %T] %n: %v";
 
 	class Logger {
 	private:
 		std::shared_ptr<spdlog::logger> spdlogLogger;
 	public:
-		Logger(char* name, spdlog::level::level_enum logLevel = spdlog::level::level_enum::trace, const char* loggerPattern = STANDARD_SPDLOG_PATTERN);
+		Logger(char* name, spdlog::level::level_enum logLevel = STANDARD_SPDLOG_DEFAULT_LEVEL, const char* loggerPattern = STANDARD_SPDLOG_STDOUT_PATTERN);
+		Logger(std::shared_ptr<spdlog::logger>& spdlogLogger);
 
 		inline std::shared_ptr<spdlog::logger> get_spdlogLogger() { return spdlogLogger; };
 		inline void setLogLevel(spdlog::level::level_enum logLevel) { spdlogLogger->set_level(logLevel); };
@@ -23,7 +26,7 @@ namespace MiMa {
 
 #ifdef MIMA_DEBUG
 #define MIMA_LOG
-#endif //Debug
+#endif //MIMA_DEBUG
 
 #ifdef MIMA_LOG
 

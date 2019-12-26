@@ -43,8 +43,6 @@ uint32_t decodeInstructionJump(const uint8_t&, const uint8_t& opCode) {
 }
 
 int main() {
-	MiMa::mimaDefaultLog.setLogLevel(spdlog::level::level_enum::info);
-
 	std::unique_ptr<MiMa::MemoryCell[]> memory = std::make_unique<MiMa::MemoryCell[]>(MiMa::MinimalMachine::MEMORY_CAPACITY);
 
 	char* instructionDecoderCode =
