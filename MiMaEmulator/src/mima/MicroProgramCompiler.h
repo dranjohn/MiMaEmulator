@@ -7,10 +7,14 @@
 #include <map>
 #include <stack>
 #include <istream>
+#include <fstream>
 #include <functional>
+
+#include "MicroProgram.h"
 
 #include "debug/Log.h"
 #include "util/BinaryOperatorBuffer.h"
+#include "util/CharStream.h"
 
 namespace MiMa {
 	//Utility: binary operators understandable by the micro program compiler
@@ -65,21 +69,33 @@ namespace MiMa {
 
 		//a pointer to the memory to manipulate
 		std::shared_ptr<uint32_t[]> memory;
-		uint8_t& firstFree;
+		uint8_t firstFree = 0;
 
 		//label tracking
-		std::map<std::string, uint8_t>& labels;
-		std::multimap<std::string, std::function<bool(const uint8_t&)>>& labelAddListeners;
+		std::map<std::string, uint8_t> labels;
+		std::multimap<std::string, std::function<bool(const uint8_t&)>> labelAddListeners;
 
 		//line tracking
 		bool lineStart = true;
 	public:
-		MicroProgramCompiler(std::shared_ptr<uint32_t[]>& memory, uint8_t& startingPoint, std::map<std::string, uint8_t>& labels, std::multimap<std::string, std::function<bool(const uint8_t&)>>& labelAddListeners);
+		MicroProgramCompiler();
 
 		bool isControl(const char& control);
 		void addToken(const char& control, char* token);
 
-		void finish(char* remaining);
-	};
+		MicroProgram finish(char* remaining);
 
+
+		// ------------------------------------------------------
+		// Compilation utility methods
+		// Use these for simple compilation of common input types
+		// ------------------------------------------------------
+		static MicroProgram compile(char* microProgramCode);
+		static MicroProgram compile(std::istream& microProgramCode);
+		 
+		static MicroProgram compileFile(char* fileName);
+
+	private:
+		static MicroProgram compile(CharStream& microProgramCodeStream);
+	};
 }

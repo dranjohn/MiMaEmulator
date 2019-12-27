@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "mima/MicroProgram.h"
+#include "mima/MicroProgramCompiler.h"
 #include "mima/MinimalMachine.h"
 #include "debug/Log.h"
 
@@ -70,8 +71,7 @@ int main() {
 		"ACCU > X; R = 1;;\n"
 		"R = 1;;\n"
 		"SDR > Y; ALU = AND; #ret;;\n";
-	MiMa::MicroProgram microprogram;
-	microprogram.compile(instructionDecoderCode);
+	MiMa::MicroProgram microprogram = MiMa::MicroProgramCompiler::compile(instructionDecoderCode);
 	std::shared_ptr<uint32_t[]> instructionDecoder = microprogram.getMemory();
 
 	memory[0x00] = { 0x000000FF };

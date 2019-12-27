@@ -10,6 +10,7 @@ namespace MiMa {
 	//Utility: constants for compiling
 	constexpr uint8_t JUMP_MASK = 0xFF;
 	constexpr uint32_t uint32_t_0 = 0;
+	constexpr uint8_t HALT_RESERVED = 0xFF;
 
 
 	//Utility: checking for letters (matching regex [a-zA-Z]*)
@@ -138,7 +139,7 @@ namespace MiMa {
 
 
 
-	// -----------------------------
+	// ------------------------------
 	// Compile mode utility functions
 	// ------------------------------
 
@@ -303,16 +304,14 @@ namespace MiMa {
 	// Microprogram compiler
 	// ---------------------
 
-	MicroProgramCompiler::MicroProgramCompiler(std::shared_ptr<uint32_t[]>& memory, uint8_t& startingPoint, std::map<std::string, uint8_t>& labels, std::multimap<std::string, std::function<bool(const uint8_t&)>>& labelAddListeners) :
-		memory(memory),
-		firstFree(startingPoint),
-		labels(labels),
-		labelAddListeners(labelAddListeners)
-	{
+	MicroProgramCompiler::MicroProgramCompiler() : memory(new uint32_t[0x100]) {
 		currentScope.reset(new DefaultCompileMode(*this));
-		labels.insert({ "halt", 0xFF }); //0xFF is reserved for halt
 
-		MIMA_LOG_INFO("Initialized microcode builder, starting compilation at 0x{:02X}", startingPoint);
+		//0xFF is reserved for halt
+		labels.insert({ "halt", HALT_RESERVED });
+		memory[HALT_RESERVED] = HALT_RESERVED;
+
+		MIMA_LOG_INFO("Initialized microcode compiler");
 	};
 
 
@@ -360,9 +359,85 @@ namespace MiMa {
 	}
 
 
-	void MicroProgramCompiler::finish(char* remaining) {
+	MicroProgram MicroProgramCompiler::finish(char* remaining) {
 		MIMA_ASSERT_WARN(*remaining == 0, "Found '{}' after finishing compilation", remaining);
 
 		MIMA_LOG_INFO("Finished microprogram compilation at 0x{:02X}", firstFree);
+
+		MicroProgram program(memory);
+		return program;
+	}
+
+
+
+	// ---------------------
+	// Compilation interface
+	// ---------------------
+
+	//Interface: read input from a pointer to a char array containing the code for the program.
+	MicroProgram MicroProgramCompiler::compile(char* microProgramCode) {
+		MIMA_LOG_INFO("Compiling microprogram from given code string");
+
+		BufferedCharStream microProgramCodeStream(microProgramCode);
+		return compile(microProgramCodeStream);
+	}
+
+	//Interface: read input from an inputstream providing the code for the program.
+	MicroProgram MicroProgramCompiler::compile(std::istream& microProgramCode) {
+		MIMA_LOG_INFO("Starting microprogram compilation");
+
+		InputCharStream microProgramCodeStream(microProgramCode);
+		return compile(microProgramCodeStream);
+	}
+
+
+	//Interface: read input from a file containing the code for the program.
+	MicroProgram MicroProgramCompiler::compileFile(char* fileName) {
+		std::ifstream file;
+		file.open(fileName);
+
+		MicroProgram program = compile(file);
+
+		file.close();
+		return program;
+	}
+
+
+	MicroProgram MicroProgramCompiler::compile(CharStream& microProgramCodeStream) {
+		//initialize token buffer
+		std::vector<char> tokenBuffer;
+
+		//initialize micro code builder
+		MicroProgramCompiler compiler;
+		char input;
+
+		//check for control token
+		while (input = microProgramCodeStream.get()) {
+			if (isspace(input)) {
+				continue;
+			}
+
+			//control character terminate tokens
+			if (compiler.isControl(input)) {
+				tokenBuffer.push_back(0);
+
+				MIMA_LOG_TRACE("Found microprogram token: '{}'", tokenBuffer.data());
+				MIMA_LOG_TRACE("Found microprogram control character: '{}'", input);
+
+				compiler.addToken(input, tokenBuffer.data());
+
+				tokenBuffer.clear();
+				continue;
+			}
+
+			//token not terminated, add current character to the token
+			tokenBuffer.push_back(input);
+		}
+
+		//add final token
+		tokenBuffer.push_back(0);
+		MicroProgram program = compiler.finish(tokenBuffer.data());
+
+		return program;
 	}
 }
