@@ -215,6 +215,8 @@ namespace MiMa {
 		compiler.firstFree++;
 		MIMA_ASSERT_WARN(compiler.firstFree != 0, "Memory position overflow in compilation, continuing to compile at 0x00.");
 		currentCode = 0;
+
+		compiler.lineStart = true;
 	}
 
 
@@ -245,11 +247,13 @@ namespace MiMa {
 		case char_MOVE:
 			//prepare for second operand of move instruction in next addToken() call
 			operatorBuffer.buffer(token, MOVE_OPERATOR);
+			compiler.lineStart = false;
 			break;
 
 		case char_SET:
 			//prepare for second operand of set instruction in next addToken() call
 			operatorBuffer.buffer(token, SET_OPERATOR);
+			compiler.lineStart = false;
 			break;
 
 		case char_BREAK:
@@ -267,18 +271,7 @@ namespace MiMa {
 				}
 
 				Scope::addJump(token + 1, fixedJump, currentCode);
-				break;
-			}
-
-			//if the token is the halt instruction, add the halt code
-			if (token == "HALT") {
-				if (operatorBuffer.isBufferOccupied()) {
-					MIMA_LOG_INFO("Discarding binary operator followed by halt instruction");
-					operatorBuffer.discardBuffer();
-				}
-
-				currentCode &= ~JUMP_MASK;
-				currentCode |= 0xFF;
+				compiler.lineStart = false;
 				break;
 			}
 
@@ -317,6 +310,8 @@ namespace MiMa {
 		labelAddListeners(labelAddListeners)
 	{
 		currentScope.reset(new DefaultScope(*this));
+		labels.insert({ "halt", 0xFF }); //0xFF is reserved for halt
+
 		MIMA_LOG_INFO("Initialized microcode builder, starting compilation at 0x{:02X}", startingPoint);
 	};
 

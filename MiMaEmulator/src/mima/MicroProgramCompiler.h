@@ -70,6 +70,9 @@ namespace MiMa {
 		//label tracking
 		std::map<std::string, uint8_t>& labels;
 		std::multimap<std::string, std::function<bool(const uint8_t&)>>& labelAddListeners;
+
+		//line tracking
+		bool lineStart = true;
 	public:
 		MicroProgramCompiler(std::shared_ptr<uint32_t[]>& memory, uint8_t& startingPoint, std::map<std::string, uint8_t>& labels, std::multimap<std::string, std::function<bool(const uint8_t&)>>& labelAddListeners);
 
