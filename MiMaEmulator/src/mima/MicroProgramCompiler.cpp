@@ -138,11 +138,11 @@ namespace MiMa {
 
 
 
-	// -----------------------
-	// Scope utility functions
-	// -----------------------
+	// -----------------------------
+	// Compile mode utility functions
+	// ------------------------------
 
-	void MicroProgramCompiler::Scope::addLabel(std::string label) {
+	void MicroProgramCompiler::CompileMode::addLabel(std::string label) {
 		MIMA_LOG_TRACE("Found label '{}' at address 0x{:02X}", label, compiler.firstFree);
 
 		//add the label to the list of found labels
@@ -168,7 +168,7 @@ namespace MiMa {
 		}
 	}
 
-	void MicroProgramCompiler::Scope::addJump(std::string label, bool& fixedJump, uint32_t& currentCode, bool overrideFixed) {
+	void MicroProgramCompiler::CompileMode::addJump(std::string label, bool& fixedJump, uint32_t& currentCode, bool overrideFixed) {
 		//confirm that this can jump instruction can be set
 		if (fixedJump && !overrideFixed) {
 			MIMA_LOG_WARN("Attempted to override fixed jump at position 0x{:02X}", compiler.firstFree);
@@ -202,7 +202,7 @@ namespace MiMa {
 	}
 
 
-	void MicroProgramCompiler::Scope::endOfLine(bool& fixedJump, uint32_t& currentCode) {
+	void MicroProgramCompiler::CompileMode::endOfLine(bool& fixedJump, uint32_t& currentCode) {
 		if (!fixedJump) {
 			MIMA_LOG_TRACE("Setting automatic jump to next address 0x{:02X} for microprogram instruction 0x{:08X}", compiler.firstFree + 1, currentCode);
 			currentCode |= (compiler.firstFree + 1);
@@ -225,23 +225,23 @@ namespace MiMa {
 	// Global scope of the microprogram compiler
 	// -----------------------------------------
 	
-	MicroProgramCompiler::DefaultScope::DefaultScope(MicroProgramCompiler& compiler) :
-		Scope(compiler),
+	MicroProgramCompiler::DefaultCompileMode::DefaultCompileMode(MicroProgramCompiler& compiler) :
+		CompileMode(compiler),
 		operatorBuffer(std::string(""), [](const std::string&, const std::string&) { return uint32_t_0; })
 	{}
 
 
-	bool MicroProgramCompiler::DefaultScope::isControl(const char& control) {
+	bool MicroProgramCompiler::DefaultCompileMode::isControl(const char& control) {
 		return control == char_LABEL
 			|| control == char_MOVE
 			|| control == char_SET
 			|| control == char_BREAK;
 	}
 
-	void MicroProgramCompiler::DefaultScope::addToken(const char& control, char* token) {
+	void MicroProgramCompiler::DefaultCompileMode::addToken(const char& control, char* token) {
 		switch (control) {
 		case char_LABEL:
-			Scope::addLabel(token);
+			CompileMode::addLabel(token);
 			break;
 
 		case char_MOVE:
@@ -259,7 +259,7 @@ namespace MiMa {
 		case char_BREAK:
 			//if the token is empty, the break operator stands for end-of-line
 			if (*token == 0) {
-				Scope::endOfLine(fixedJump, currentCode);
+				CompileMode::endOfLine(fixedJump, currentCode);
 				break;
 			}
 
@@ -270,7 +270,7 @@ namespace MiMa {
 					operatorBuffer.discardBuffer();
 				}
 
-				Scope::addJump(token + 1, fixedJump, currentCode);
+				CompileMode::addJump(token + 1, fixedJump, currentCode);
 				compiler.lineStart = false;
 				break;
 			}
@@ -288,11 +288,11 @@ namespace MiMa {
 	}
 
 
-	void MicroProgramCompiler::DefaultScope::cleanUpScope() {
+	void MicroProgramCompiler::DefaultCompileMode::closeCompileMode() {
 		MIMA_LOG_TRACE("Cleaning up default compiler scope");
 	}
 
-	void MicroProgramCompiler::DefaultScope::finish(char* finish) {
+	void MicroProgramCompiler::DefaultCompileMode::finish(char* finish) {
 		MIMA_ASSERT_ERROR(!operatorBuffer.isBufferOccupied(), "Binary operator remaining after finishing compilation with remaining operand");
 		MIMA_ASSERT_ERROR(currentCode == 0, "Failed to write last line in compilation 0x({:08X}) into dedicated memory position 0x{:02X}", currentCode, compiler.firstFree);
 	}
@@ -309,7 +309,7 @@ namespace MiMa {
 		labels(labels),
 		labelAddListeners(labelAddListeners)
 	{
-		currentScope.reset(new DefaultScope(*this));
+		currentScope.reset(new DefaultCompileMode(*this));
 		labels.insert({ "halt", 0xFF }); //0xFF is reserved for halt
 
 		MIMA_LOG_INFO("Initialized microcode builder, starting compilation at 0x{:02X}", startingPoint);
@@ -323,12 +323,40 @@ namespace MiMa {
 	}
 
 	void MicroProgramCompiler::addToken(const char& control, char* token) {
-		if (control == char_COMPILER_DIRECTIVE) {
-			MIMA_LOG_ERROR("Discarding unknwon compiler directive '{}'", token);
+		//if the control char is not a compiler directive indicator, pass it to the current scope
+		if (control != char_COMPILER_DIRECTIVE) {
+			currentScope->addToken(control, token);
 			return;
 		}
 
-		currentScope->addToken(control, token);
+
+		//otherwise, execute compiler directive
+		if (token == "scope_default") {
+			if (!lineStart) {
+				MIMA_LOG_ERROR("Discarding invalid compiler directive '!scope_default' which is not a line start");
+				return;
+			}
+
+			currentScope->closeCompileMode();
+			currentScope.reset(new DefaultCompileMode(*this));
+
+			MIMA_LOG_TRACE("Switched to a default compiler scope");
+			return;
+		}
+
+		if (token == "scope_conditionalDecode") {
+			if (!lineStart) {
+				MIMA_LOG_ERROR("Discarding invalid compiler directive '!scope_decode' which is not a line start");
+				return;
+			}
+
+			currentScope->closeCompileMode();
+
+			MIMA_LOG_TRACE("Switched to a conditional decode compiler scope");
+			return;
+		}
+
+		MIMA_LOG_ERROR("Discarding unknwon compiler directive '{}'", token);
 	}
 
 

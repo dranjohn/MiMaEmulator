@@ -18,10 +18,10 @@ namespace MiMa {
 
 	class MicroProgramCompiler {
 	private:
-		class Scope {
+		class CompileMode {
 		protected:
 			MicroProgramCompiler& compiler;
-			Scope(MicroProgramCompiler& compiler) : compiler(compiler) {}
+			CompileMode(MicroProgramCompiler& compiler) : compiler(compiler) {}
 
 			//adds a new label and resolves unresolved jumps to the given label
 			void addLabel(std::string label);
@@ -34,13 +34,13 @@ namespace MiMa {
 			virtual bool isControl(const char& control) = 0;
 			virtual void addToken(const char& control, char* token) = 0;
 
-			virtual void cleanUpScope() = 0;
+			virtual void closeCompileMode() = 0;
 			virtual void finish(char* remaining) = 0;
 		};
 
 
 	private:
-		class DefaultScope : public Scope {
+		class DefaultCompileMode : public CompileMode {
 		private:
 			//current line of code encoding
 			bool fixedJump = false;
@@ -49,19 +49,19 @@ namespace MiMa {
 			//binary operator buffers
 			BinaryOperatorBuffer<std::string, uint32_t> operatorBuffer;
 		public:
-			DefaultScope(MicroProgramCompiler& compiler);
+			DefaultCompileMode(MicroProgramCompiler& compiler);
 
 			bool isControl(const char& control) override;
 			void addToken(const char& control, char* token) override;
 
-			void cleanUpScope() override;
+			void closeCompileMode() override;
 			void finish(char* remaining) override;
 		};
 
 
 	private:
 		//scope stack
-		std::unique_ptr<Scope> currentScope;
+		std::unique_ptr<CompileMode> currentScope;
 
 		//a pointer to the memory to manipulate
 		std::shared_ptr<uint32_t[]> memory;
