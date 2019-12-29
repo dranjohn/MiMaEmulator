@@ -32,7 +32,8 @@ project (projectName)
 	includedirs
 	{
 		"%{prj.name}/src",
-		"%{prj.name}/vendor/spdlog/include"
+		"%{prj.name}/vendor/spdlog/include",
+		"%{prj.name}/vendor/fmt/include"
 	}
 
 	filter "system:windows"
@@ -46,5 +47,8 @@ project (projectName)
 	filter "configurations:Release"
 		defines "MIMA_RELEASE"
 		optimize "On"
+	
+	filter "action:vs*"
+		buildoptions{ "/Wall" }
 
 	
