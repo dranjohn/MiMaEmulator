@@ -1,11 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include <istream>
 #include <memory>
-#include <string>
-#include <map>
-#include <functional>
 
 #include "util/CharStream.h"
 

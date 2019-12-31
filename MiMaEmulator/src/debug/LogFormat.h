@@ -5,5 +5,5 @@
 #include "util/Tree.h"
 
 namespace MiMa {
-	std::string formatHierarchy(Tree<std::string>& hierarchy);
+	std::string formatHierarchy(const Tree<std::string>& hierarchy);
 }

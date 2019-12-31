@@ -12,9 +12,9 @@ namespace MiMa {
 	typedef typename std::vector<DataNode<std::string>>::const_iterator StringNodeIterator;
 	void addChildren(StringNodeIterator iterator, const StringNodeIterator& end, std::ostream& output, std::vector<unsigned char>& format = std::vector<unsigned char>());
 
-	std::string formatHierarchy(Tree<std::string>& hierarchy) {
+	std::string formatHierarchy(const Tree<std::string>& hierarchy) {
 		std::stringstream output;
-		DataNode<std::string>& root = hierarchy.getRoot();
+		const DataNode<std::string>& root = hierarchy.getConstRoot();
 
 		output << root.getData() << "\n";
 		addChildren(root.getChildren(), root.getChildrenEnd(), output);

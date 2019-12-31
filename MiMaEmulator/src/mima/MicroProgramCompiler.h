@@ -5,7 +5,6 @@
 #include <memory>
 #include <string>
 #include <map>
-#include <stack>
 #include <istream>
 #include <fstream>
 #include <functional>
@@ -64,15 +63,15 @@ namespace MiMa {
 
 
 	private:
-		//scope stack
-		std::unique_ptr<CompileMode> currentScope;
+		//current compile mode
+		std::unique_ptr<CompileMode> currentCompileMode;
 
 		//a pointer to the memory to manipulate
 		std::shared_ptr<uint32_t[]> memory;
 		uint8_t firstFree = 0;
 
 		//label tracking
-		std::map<std::string, uint8_t> labels;
+		std::unordered_map<std::string, uint8_t> labels;
 		std::multimap<std::string, std::function<bool(const uint8_t&)>> labelAddListeners;
 
 		//line tracking

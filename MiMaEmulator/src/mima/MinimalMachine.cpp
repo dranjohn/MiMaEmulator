@@ -1,21 +1,13 @@
 #include "MinimalMachine.h"
 
+#include <fmt/format.h>
+
 #include "debug/LogFormat.h"
 #include "util/Tree.h"
-#include <fmt/format.h>
 
 #define READ_MIMA_REGISTER(sb, mc, db, reg) if (StatusBit::sb & mc) db |= reg
 #define WRITE_MIMA_REGISTER(sb, mc, db, reg) if (StatusBit::sb & mc) reg = db
 #define WRITE_MIMA_REGISTER_MASKED(sb, mc, db, reg, msk) if (StatusBit::sb & mc) reg = (db & msk)
-
-std::string trueFalse(const int& value) {
-	if (value) {
-		return "true";
-	}
-	else {
-		return "false";
-	}
-}
 
 
 namespace MiMa {
@@ -199,7 +191,6 @@ namespace MiMa {
 
 
 	void MinimalMachine::printState() const {
-		//TODO: fix hierarchy format
 		Tree<std::string> hierarchy("MinimalMachine state");
 		DataNode<std::string>& root = hierarchy.getRoot();
 

@@ -34,4 +34,5 @@ public:
 	Tree(Data rootData) : root(rootData) {}
 
 	inline DataNode<Data>& getRoot() { return root; }
+	inline const DataNode<Data>& getConstRoot() const { return root; }
 };

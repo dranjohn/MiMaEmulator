@@ -178,7 +178,7 @@ namespace MiMa {
 		MIMA_ASSERT_TRACE(!fixedJump, "Overriding fixed jump at 0x{:02X}", compiler.firstFree);
 
 		//find label location (ignoring the jump marker)
-		std::map<std::string, uint8_t>::iterator labelLocation = compiler.labels.find(label);
+		std::unordered_map<std::string, uint8_t>::iterator labelLocation = compiler.labels.find(label);
 
 		if (labelLocation != compiler.labels.end()) { //label found
 			MIMA_LOG_TRACE("Found microprogram jump instruction from 0x{:02X} to 0x{:02X}", compiler.firstFree, labelLocation->second);
@@ -222,9 +222,9 @@ namespace MiMa {
 
 
 
-	// -----------------------------------------
-	// Global scope of the microprogram compiler
-	// -----------------------------------------
+	// ----------------------------------------------------------
+	// Default (global) compile mode of the microprogram compiler
+	// ----------------------------------------------------------
 	
 	MicroProgramCompiler::DefaultCompileMode::DefaultCompileMode(MicroProgramCompiler& compiler) :
 		CompileMode(compiler),
@@ -290,7 +290,7 @@ namespace MiMa {
 
 
 	void MicroProgramCompiler::DefaultCompileMode::closeCompileMode() {
-		MIMA_LOG_TRACE("Cleaning up default compiler scope");
+		MIMA_LOG_TRACE("Closing default compiler mode");
 	}
 
 	void MicroProgramCompiler::DefaultCompileMode::finish(char* finish) {
@@ -305,7 +305,7 @@ namespace MiMa {
 	// ---------------------
 
 	MicroProgramCompiler::MicroProgramCompiler() : memory(new uint32_t[0x100]) {
-		currentScope.reset(new DefaultCompileMode(*this));
+		currentCompileMode.reset(new DefaultCompileMode(*this));
 
 		//0xFF is reserved for halt
 		labels.insert({ "halt", HALT_RESERVED });
@@ -318,40 +318,40 @@ namespace MiMa {
 	bool MicroProgramCompiler::isControl(const char& control) {
 		//check if a char is a control character usable for addToken()
 		return control == char_COMPILER_DIRECTIVE
-			|| currentScope->isControl(control);
+			|| currentCompileMode->isControl(control);
 	}
 
 	void MicroProgramCompiler::addToken(const char& control, char* token) {
-		//if the control char is not a compiler directive indicator, pass it to the current scope
+		//if the control char is not a compiler directive indicator, pass it to the current compile mode
 		if (control != char_COMPILER_DIRECTIVE) {
-			currentScope->addToken(control, token);
+			currentCompileMode->addToken(control, token);
 			return;
 		}
 
 
 		//otherwise, execute compiler directive
-		if (token == "scope_default") {
+		if (token == "cm_default") {
 			if (!lineStart) {
-				MIMA_LOG_ERROR("Discarding invalid compiler directive '!scope_default' which is not a line start");
+				MIMA_LOG_ERROR("Discarding invalid compiler directive '!cm_default' which is not a line start");
 				return;
 			}
 
-			currentScope->closeCompileMode();
-			currentScope.reset(new DefaultCompileMode(*this));
+			currentCompileMode->closeCompileMode();
+			currentCompileMode.reset(new DefaultCompileMode(*this));
 
-			MIMA_LOG_TRACE("Switched to a default compiler scope");
+			MIMA_LOG_TRACE("Switched to a default compiler compile mode");
 			return;
 		}
 
-		if (token == "scope_conditionalDecode") {
+		if (token == "cm_conditionalDecode") {
 			if (!lineStart) {
-				MIMA_LOG_ERROR("Discarding invalid compiler directive '!scope_decode' which is not a line start");
+				MIMA_LOG_ERROR("Discarding invalid compiler directive '!cm_decode' which is not a line start");
 				return;
 			}
 
-			currentScope->closeCompileMode();
+			currentCompileMode->closeCompileMode();
 
-			MIMA_LOG_TRACE("Switched to a conditional decode compiler scope");
+			MIMA_LOG_TRACE("Switched to a conditional decode compiler compile mode");
 			return;
 		}
 
