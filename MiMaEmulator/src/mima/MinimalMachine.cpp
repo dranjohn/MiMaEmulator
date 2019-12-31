@@ -1,6 +1,8 @@
 #include "MinimalMachine.h"
 
 #include "debug/LogFormat.h"
+#include "util/Tree.h"
+#include <fmt/format.h>
 
 #define READ_MIMA_REGISTER(sb, mc, db, reg) if (StatusBit::sb & mc) db |= reg
 #define WRITE_MIMA_REGISTER(sb, mc, db, reg) if (StatusBit::sb & mc) reg = db
@@ -198,21 +200,25 @@ namespace MiMa {
 
 	void MinimalMachine::printState() const {
 		//TODO: fix hierarchy format
-		HierarchyFormat format("Minimal machine state:");
-		format.addElement("running: " + trueFalse(running));
-		format.addElement("instruction decoder state:");
-		format.addChild("next microprogram instruction address: ");
-		format.addElement("next microprogram instruction code: ", true);
-		format.addElement("register states:", true);
-		format.addChild("IAR: ");
-		format.addElement("IR: ");
-		format.addElement("X: ");
-		format.addElement("Y: ");
-		format.addElement("Z: ");
-		format.addElement("Accumulator: ");
-		format.addElement("SAR: ");
-		format.addElement("SDR: ", true);
+		Tree<std::string> hierarchy("MinimalMachine state");
+		DataNode<std::string>& root = hierarchy.getRoot();
 
-		//MIMA_LOG_INFO("\n{}", format.getBuffer());
+		root.addChild(fmt::format("running: {}", running));
+
+		DataNode<std::string>& instructionDecoderRoot = root.addChild("Instruction decoder state");
+		instructionDecoderRoot.addChild(fmt::format("next microprogram instruction address: 0x{:02X}", instructionDecoderState));
+		instructionDecoderRoot.addChild(fmt::format("next microprogram instruction code: 0x{:08X}", instructionDecoder[instructionDecoderState]));
+
+		DataNode<std::string>& registersRoot = root.addChild("Register states");
+		registersRoot.addChild(fmt::format("IAR: 0x{:05X}", instructionAddressRegister));
+		registersRoot.addChild(fmt::format("IR: 0x{:06X}", instructionRegister.value));
+		registersRoot.addChild(fmt::format("X: 0x{:06X}", X));
+		registersRoot.addChild(fmt::format("Y: 0x{:06X}", Y));
+		registersRoot.addChild(fmt::format("Z: 0x{:06X}", Z));
+		registersRoot.addChild(fmt::format("Accumulator: 0x{:06X}", accumulator.value));
+		registersRoot.addChild(fmt::format("SAR: 0x{:05X}", storageAddressRegister));
+		registersRoot.addChild(fmt::format("SDR: 0x{:06X}", storageDataRegister));
+
+		MIMA_LOG_INFO("\n{}", formatHierarchy(hierarchy));
 	}
 }

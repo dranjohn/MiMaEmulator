@@ -1,58 +1,59 @@
 #include "LogFormat.h"
 
+#include <vector>
+#include <sstream>
+
 namespace MiMa {
-	void HierarchyFormat::addElement(std::string content, bool last) {
-		if (completed) {
-			//TODO: warn
-		}
+	constexpr unsigned char char_ELEMENT = 0xC3; //box-building char top-right-bot
+	constexpr unsigned char char_LAST_ELEMENT = 0xC0; //box-building char top-right
+	constexpr unsigned char char_SKIP_ELEMENT = 0xB3; //box-building char top-bot
+	constexpr unsigned char char_INDENT = 0x20; //space
 
-		for (unsigned int i = 0; i < indent + skip; i++) {
-			buffer << ((i < indent) ? char_INDENT : char_SKIP_ELEMENT) << char_INDENT;
-		}
+	typedef typename std::vector<DataNode<std::string>>::const_iterator StringNodeIterator;
+	void addChildren(StringNodeIterator iterator, const StringNodeIterator& end, std::ostream& output, std::vector<unsigned char>& format = std::vector<unsigned char>());
 
-		if (last) {
-			buffer << char_LAST_ELEMENT;
+	std::string formatHierarchy(Tree<std::string>& hierarchy) {
+		std::stringstream output;
+		DataNode<std::string>& root = hierarchy.getRoot();
 
-			if (skip == 0) {
-				completed = true;
+		output << root.getData() << "\n";
+		addChildren(root.getChildren(), root.getChildrenEnd(), output);
+
+		return output.str();
+	}
+
+	void addChildren(StringNodeIterator iterator, const StringNodeIterator& end, std::ostream& output, std::vector<unsigned char>& format) {
+		while (iterator != end) {
+			std::string data = iterator->getData();
+			StringNodeIterator& children = iterator->getChildren();
+			const StringNodeIterator& childrenEnd = iterator->getChildrenEnd();
+
+			++iterator;
+
+			for (const unsigned char& formatChar : format) {
+				output << formatChar << char_INDENT;
+			}
+
+			if (iterator == end) {
+				output << char_LAST_ELEMENT;
+				format.push_back(char_INDENT);
 			}
 			else {
-				skip--;
+				output << char_ELEMENT;
+				format.push_back(char_SKIP_ELEMENT);
+			}
+			output << char_INDENT << data << "\n";
+
+			addChildren(children, childrenEnd, output, format);
+			
+
+			if (!format.empty()) {
+				format.pop_back();
+
+				while (!format.empty() && format.back() == char_INDENT && iterator == end) {
+					format.pop_back();
+				}
 			}
 		}
-		else {
-			buffer << char_ELEMENT;
-		}
-
-		buffer << char_INDENT << content << std::endl;
-
-		if (last && !completed) {
-			emptyLine();
-		}
-	}
-
-	void HierarchyFormat::addChild(std::string content, bool last) {
-		if (completed) {
-			completed = false;
-			indent++;
-		}
-		else {
-			skip++;
-		}
-
-		addElement(content, last);
-	}
-
-
-	void HierarchyFormat::emptyLine() {
-		if (completed) {
-			//TODO: warn
-			return;
-		}
-
-		for (unsigned int i = 0; i < indent + skip + 1; i++) {
-			buffer << ((i < indent) ? char_INDENT : char_SKIP_ELEMENT) << char_INDENT;
-		}
-		buffer << std::endl;
 	}
 }
