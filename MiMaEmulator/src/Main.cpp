@@ -71,13 +71,12 @@ int main() {
 		"ACCU > X; R = 1;;\n"
 		"R = 1;;\n"
 		"SDR > Y; ALU = AND; #ret;;\n";
-	MiMa::MicroProgram microprogram = MiMa::MicroProgramCompiler::compile(instructionDecoderCode);
-	std::shared_ptr<uint32_t[]> instructionDecoder = microprogram.getMemory();
+	MiMa::MicroProgram instructionDecoder = MiMa::MicroProgramCompiler::compile(instructionDecoderCode);
 
-	memory[0x00] = { 0x000000FF };
-	memory[0x01] = { 0x00300020 };
-	memory[0x02] = { 0x00F00000 };
-	memory[0x20] = { 0x00000003 };
+	memory[0x00] = { 0x0000FF };
+	memory[0x01] = { 0x300020 };
+	memory[0x02] = { 0xF00000 };
+	memory[0x20] = { 0x000003 };
 
 	MiMa::MinimalMachine mima(instructionDecoder, decodeInstructionJump, memory.get());
 	mima.printState();

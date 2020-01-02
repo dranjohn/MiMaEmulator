@@ -11,7 +11,7 @@
 
 
 namespace MiMa {
-	MinimalMachine::MinimalMachine(std::shared_ptr<uint32_t[]>& instructionDecoder, InstructionDecodeFunction decodingFunction, MemoryCell memory[MEMORY_CAPACITY]) :
+	MinimalMachine::MinimalMachine(MicroProgram instructionDecoder, InstructionDecodeFunction decodingFunction, MemoryCell memory[MEMORY_CAPACITY]) :
 		//registers
 		accumulator({ 0 }),
 		instructionAddressRegister(0),
@@ -38,8 +38,8 @@ namespace MiMa {
 		MIMA_LOG_TRACE("Starting MiMa clock cycle emulation");
 
 		//get microcode for current register transfer
-		uint32_t microCode = instructionDecoder[instructionDecoderState];
 		uint8_t opCode = instructionRegister.opCode.value;
+		uint32_t microCode = instructionDecoder.getMicroCode(instructionDecoderState, opCode);
 		uint32_t decoding = (microCode & StatusBit::DECODING) >> 28;
 
 		MIMA_LOG_TRACE("Found microprogram instruction 0x{:08X}", microCode);
@@ -198,7 +198,7 @@ namespace MiMa {
 
 		DataNode<std::string>& instructionDecoderRoot = root.addChild("Instruction decoder state");
 		instructionDecoderRoot.addChild(fmt::format("next microprogram instruction address: 0x{:02X}", instructionDecoderState));
-		instructionDecoderRoot.addChild(fmt::format("next microprogram instruction code: 0x{:08X}", instructionDecoder[instructionDecoderState]));
+		instructionDecoderRoot.addChild(fmt::format("next microprogram instruction code: 0x{:08X}", instructionDecoder.getMicroCode(instructionDecoderState, 0)));
 
 		DataNode<std::string>& registersRoot = root.addChild("Register states");
 		registersRoot.addChild(fmt::format("IAR: 0x{:05X}", instructionAddressRegister));

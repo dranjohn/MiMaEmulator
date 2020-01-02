@@ -64,7 +64,7 @@ namespace MiMa {
 		Data storageDataRegister : DATA_SIZE;
 
 		//Exchangable MiMa components:
-		std::shared_ptr<uint32_t[]> instructionDecoder;
+		MicroProgram instructionDecoder;
 		InstructionDecodeFunction decodingFunction;
 		MemoryCell* memory;
 
@@ -73,7 +73,7 @@ namespace MiMa {
 		uint8_t instructionDecoderState;
 		MemoryState memoryState;
 	public:
-		MinimalMachine(std::shared_ptr<uint32_t[]>& instructionDecoder, InstructionDecodeFunction decodingFunction, MemoryCell memory[MEMORY_CAPACITY]);
+		MinimalMachine(MicroProgram instructionDecoder, InstructionDecodeFunction decodingFunction, MemoryCell memory[MEMORY_CAPACITY]);
 		~MinimalMachine() { MIMA_LOG_INFO("Destructed MiMa"); }
 
 		//emulate minimal machine

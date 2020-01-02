@@ -189,10 +189,12 @@ namespace MiMa {
 			MIMA_LOG_TRACE("Found unresolved microprogram jump from 0x{:02X}", compiler.firstFree);
 
 			uint8_t firstFreeCopy = compiler.firstFree;
-			std::shared_ptr<uint32_t[]>& memoryReference = compiler.memory;
+			std::shared_ptr<MicroProgramCode[]>& memoryReference = compiler.memory;
 			std::function<bool(const uint8_t&)> x = [firstFreeCopy, memoryReference](const uint8_t& labelAddress) {
-				memoryReference[firstFreeCopy] &= ~JUMP_MASK;
-				memoryReference[firstFreeCopy] |= labelAddress;
+				uint32_t currentCode = memoryReference[firstFreeCopy].getBits(0);
+				currentCode &= ~JUMP_MASK;
+				currentCode |= labelAddress;
+				memoryReference[firstFreeCopy] = MicroProgramCode(currentCode);
 				
 				return true;
 			};
@@ -209,7 +211,7 @@ namespace MiMa {
 			currentCode |= (compiler.firstFree + 1);
 		}
 
-		compiler.memory[compiler.firstFree] = currentCode;
+		compiler.memory[compiler.firstFree] = MicroProgramCode(currentCode);
 		MIMA_LOG_TRACE("Compiled microcode 0x{:08X}, stored at 0x{:02X}", currentCode, compiler.firstFree);
 
 		fixedJump = false;
@@ -304,12 +306,12 @@ namespace MiMa {
 	// Microprogram compiler
 	// ---------------------
 
-	MicroProgramCompiler::MicroProgramCompiler() : memory(new uint32_t[0x100]) {
+	MicroProgramCompiler::MicroProgramCompiler() : memory(new MicroProgramCode[0x100]) {
 		currentCompileMode.reset(new DefaultCompileMode(*this));
 
 		//0xFF is reserved for halt
 		labels.insert({ "halt", HALT_RESERVED });
-		memory[HALT_RESERVED] = HALT_RESERVED;
+		memory[HALT_RESERVED] = MicroProgramCode(HALT_RESERVED);
 
 		MIMA_LOG_INFO("Initialized microcode compiler");
 	};

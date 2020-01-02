@@ -67,7 +67,7 @@ namespace MiMa {
 		std::unique_ptr<CompileMode> currentCompileMode;
 
 		//a pointer to the memory to manipulate
-		std::shared_ptr<uint32_t[]> memory;
+		std::shared_ptr<MicroProgramCode[]> memory;
 		uint8_t firstFree = 0;
 
 		//label tracking
