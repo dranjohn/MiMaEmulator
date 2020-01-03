@@ -5,9 +5,9 @@
 #include "debug/LogFormat.h"
 #include "util/Tree.h"
 
-#define READ_MIMA_REGISTER(sb, mc, db, reg) if (StatusBit::sb & mc) db |= reg
-#define WRITE_MIMA_REGISTER(sb, mc, db, reg) if (StatusBit::sb & mc) reg = db
-#define WRITE_MIMA_REGISTER_MASKED(sb, mc, db, reg, msk) if (StatusBit::sb & mc) reg = (db & msk)
+#define READ_MIMA_REGISTER(cond, db, reg) if (cond) db |= reg
+#define WRITE_MIMA_REGISTER(cond, db, reg) if (cond) reg = db
+#define WRITE_MIMA_REGISTER_MASKED(cond, db, reg, msk) if (cond) reg = (db & msk)
 
 
 namespace MiMa {
@@ -39,43 +39,43 @@ namespace MiMa {
 
 		//get microcode for current register transfer
 		uint8_t opCode = instructionRegister.opCode.value;
-		uint32_t microCode = instructionDecoder.getMicroCode(instructionDecoderState, opCode);
-		uint32_t decoding = (microCode & StatusBit::DECODING) >> 28;
+		MicroProgramCode microCode = instructionDecoder.getMicroCode(instructionDecoderState, opCode);
+		uint8_t decoding = microCode.getDecodingBits();
 
-		MIMA_LOG_TRACE("Found microprogram instruction 0x{:08X}", microCode);
+		MIMA_LOG_TRACE("Found microprogram instruction {}", microCode);
 
 		if (decoding > 0) {
 			MIMA_LOG_TRACE("Found decoding state 0x{:02X}", decoding);
 
-			microCode = decodingFunction(decoding, opCode);
-			MIMA_LOG_TRACE("New microcode is 0x{:08X}", microCode);
+			microCode = MicroProgramCode(decodingFunction(decoding, opCode));
+			MIMA_LOG_TRACE("New microcode is {}", microCode);
 		}
 
 		MIMA_LOG_TRACE("Found operation code 0x{:02X}", opCode);
 
 		//put data on the data bus
 		Data dataBus = 0;
-		READ_MIMA_REGISTER(SDR_WRITING, microCode, dataBus, storageDataRegister);
-		READ_MIMA_REGISTER(IR_WRITING, microCode, dataBus, instructionRegister.value);
-		READ_MIMA_REGISTER(IAR_WRITING, microCode, dataBus, instructionAddressRegister);
-		READ_MIMA_REGISTER(ONE, microCode, dataBus, ONE);
-		READ_MIMA_REGISTER(ALU_RESULT, microCode, dataBus, Z);
-		READ_MIMA_REGISTER(ACCUMULATOR_WRITING, microCode, dataBus, accumulator.value);
+		READ_MIMA_REGISTER(microCode.isStorageDataRegisterWriting(), dataBus, storageDataRegister);
+		READ_MIMA_REGISTER(microCode.isInstructionRegisterWriting(), dataBus, instructionRegister.value);
+		READ_MIMA_REGISTER(microCode.isInstructionAddressRegisterWriting(), dataBus, instructionAddressRegister);
+		READ_MIMA_REGISTER(microCode.isConstantOneWriting(), dataBus, ONE);
+		READ_MIMA_REGISTER(microCode.isALUResultWriting(), dataBus, Z);
+		READ_MIMA_REGISTER(microCode.isAccumulatorRegisterWriting(), dataBus, accumulator.value);
 		MIMA_LOG_TRACE("Databus state after writing is 0x{:08X}", dataBus);
 
 		//TODO: replace databus |= reg with short circuits
 
 		//read data from the bus
-		WRITE_MIMA_REGISTER(SDR_READING, microCode, dataBus, storageDataRegister);
-		WRITE_MIMA_REGISTER(IR_READING, microCode, dataBus, instructionRegister.value);
-		WRITE_MIMA_REGISTER(ALU_RIGHT_OPERAND, microCode, dataBus, X);
-		WRITE_MIMA_REGISTER(ALU_LEFT_OPERAND, microCode, dataBus, Y);
-		WRITE_MIMA_REGISTER(ACCUMULATOR_READING, microCode, dataBus, accumulator.value);
-		WRITE_MIMA_REGISTER_MASKED(SAR_READING, microCode, dataBus, storageAddressRegister, 0xFFFFF);
-		WRITE_MIMA_REGISTER_MASKED(IAR_READING, microCode, dataBus, instructionAddressRegister, 0xFFFFF);
+		WRITE_MIMA_REGISTER(microCode.isStorageDataRegisterReading(), dataBus, storageDataRegister);
+		WRITE_MIMA_REGISTER(microCode.isInstructionRegisterReading(), dataBus, instructionRegister.value);
+		WRITE_MIMA_REGISTER(microCode.isLeftALUOperandReading(), dataBus, X);
+		WRITE_MIMA_REGISTER(microCode.isRightALUOperandReading(), dataBus, Y);
+		WRITE_MIMA_REGISTER(microCode.isAccumulatorRegisterReading(), dataBus, accumulator.value);
+		WRITE_MIMA_REGISTER_MASKED(microCode.isStorageAddressRegisterReading(), dataBus, storageAddressRegister, 0xFFFFF);
+		WRITE_MIMA_REGISTER_MASKED(microCode.isInstructionAddressRegisterReading(), dataBus, instructionAddressRegister, 0xFFFFF);
 
 		//Alu operation
-		uint8_t ALUoperation = (microCode & StatusBit::ALU_C) >> 12;
+		uint8_t ALUoperation = microCode.getALUCode();
 		MIMA_LOG_TRACE("Alu operation code: 0x{:01X}", ALUoperation);
 
 		switch(ALUoperation) {
@@ -108,8 +108,10 @@ namespace MiMa {
 		}
 
 		//storage access
-		uint8_t storageAccess = (microCode & 0xC00) >> 10;
-		MIMA_LOG_TRACE("Storage access bits are 0b{:02b}", storageAccess);
+		uint8_t storageAccess = 0;
+		if (microCode.isWritingToMemory()) storageAccess += BIT(0);
+		if (microCode.isReadingFromMemory()) storageAccess += BIT(1);
+
 		switch (storageAccess) {
 		case 0:
 			memoryState.accessDuration = 0;
@@ -138,8 +140,8 @@ namespace MiMa {
 				memoryState.address = storageAddressRegister;
 			}
 
-			if (memoryState.access == 1) {
-				memoryState.access = 0;
+			if (memoryState.access == 0) {
+				memoryState.access = 1;
 				memoryState.accessDuration = 1;
 			}
 			else {
@@ -156,7 +158,7 @@ namespace MiMa {
 		}
 
 		//step to next register transfer
-		uint8_t nextInstructionDecoderState = microCode & StatusBit::FOLLOWING_ADDRESS;
+		uint8_t nextInstructionDecoderState = microCode.getNextInstructionDecoderState();
 		if (nextInstructionDecoderState == instructionDecoderState) {
 			MIMA_LOG_TRACE("Halted MiMa due to instruction repitition");
 			running = false;
@@ -198,7 +200,7 @@ namespace MiMa {
 
 		DataNode<std::string>& instructionDecoderRoot = root.addChild("Instruction decoder state");
 		instructionDecoderRoot.addChild(fmt::format("next microprogram instruction address: 0x{:02X}", instructionDecoderState));
-		instructionDecoderRoot.addChild(fmt::format("next microprogram instruction code: 0x{:08X}", instructionDecoder.getMicroCode(instructionDecoderState, 0)));
+		instructionDecoderRoot.addChild(fmt::format("next microprogram instruction code: {}", instructionDecoder.getMicroCode(instructionDecoderState, 0)));
 
 		DataNode<std::string>& registersRoot = root.addChild("Register states");
 		registersRoot.addChild(fmt::format("IAR: 0x{:05X}", instructionAddressRegister));

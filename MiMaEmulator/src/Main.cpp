@@ -80,7 +80,7 @@ int main() {
 
 	MiMa::MinimalMachine mima(instructionDecoder, decodeInstructionJump, memory.get());
 	mima.printState();
-	
+
 	mima.emulateLifeTime();
 	mima.printState();
 	
