@@ -73,6 +73,10 @@ int main() {
 		"SDR > Y; ALU = AND; #ret;;\n";
 	MiMa::MicroProgram instructionDecoder = MiMa::MicroProgramCompiler::compile(instructionDecoderCode);
 
+	/*for (int i = 0; i < 0x18; i++) {
+		MIMA_LOG_INFO("Bits for 0x{:02}: {}", i, instructionDecoder.getMicroCode(i, 0).getBits(0));
+	}*/
+
 	memory[0x00] = { 0x0000FF };
 	memory[0x01] = { 0x300020 };
 	memory[0x02] = { 0xF00000 };

@@ -29,10 +29,10 @@ namespace MiMa {
 			//adds a new label and resolves unresolved jumps to the given label
 			void addLabel(std::string label);
 			//adds a jump instruction to the current microcode
-			void addJump(std::string label, bool& fixedJump, uint32_t& currentCode, bool overrideFixed = false);
+			void addJump(std::string label, bool& fixedJump, MicroProgramCode& currentCode, bool overrideFixed = false);
 
 			//ends the current line
-			void endOfLine(bool& fixedJump, uint32_t& currentCode);
+			void endOfLine(bool& fixedJump, MicroProgramCode& currentCode);
 		public:
 			virtual bool isControl(const char& control) = 0;
 			virtual void addToken(const char& control, char* token) = 0;
@@ -47,7 +47,6 @@ namespace MiMa {
 		private:
 			//current line of code encoding
 			bool fixedJump = false;
-			uint32_t currentCode = 0;
 
 			//binary operator buffers
 			BinaryOperatorBuffer<std::string, uint32_t> operatorBuffer;

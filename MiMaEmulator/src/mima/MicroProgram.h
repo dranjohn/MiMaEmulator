@@ -13,6 +13,8 @@ namespace MiMa {
 		friend struct fmt::formatter<MiMa::MicroProgramCode>;
 
 	private:
+		static const uint32_t JUMP_MASK = 0xFF;
+
 		uint32_t bits;
 
 	public:
@@ -38,6 +40,9 @@ namespace MiMa {
 		inline bool isAccumulatorRegisterReading() const { return bits & ACCUMULATOR_READING; }
 		inline bool isAccumulatorRegisterWriting() const { return bits & ACCUMULATOR_WRITING; }
 		inline uint8_t getDecodingBits() const { return (uint8_t)((bits & DECODING) >> 28); }
+
+		inline void setJump(const uint8_t& jumpDestination) { bits &= ~JUMP_MASK; bits |= jumpDestination; }
+		inline void addBits(const uint32_t& addedBits) { bits |= addedBits; }
 	};
 
 	class MicroProgram {

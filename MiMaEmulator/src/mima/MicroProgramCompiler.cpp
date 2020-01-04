@@ -169,7 +169,7 @@ namespace MiMa {
 		}
 	}
 
-	void MicroProgramCompiler::CompileMode::addJump(std::string label, bool& fixedJump, uint32_t& currentCode, bool overrideFixed) {
+	void MicroProgramCompiler::CompileMode::addJump(std::string label, bool& fixedJump, MicroProgramCode& currentCode, bool overrideFixed) {
 		//confirm that this can jump instruction can be set
 		if (fixedJump && !overrideFixed) {
 			MIMA_LOG_WARN("Attempted to override fixed jump at position 0x{:02X}", compiler.firstFree);
@@ -182,8 +182,7 @@ namespace MiMa {
 
 		if (labelLocation != compiler.labels.end()) { //label found
 			MIMA_LOG_TRACE("Found microprogram jump instruction from 0x{:02X} to 0x{:02X}", compiler.firstFree, labelLocation->second);
-			currentCode &= ~JUMP_MASK;
-			currentCode |= labelLocation->second;
+			currentCode.setJump(labelLocation->second);
 		}
 		else { //label not found, add this to unresolved references
 			MIMA_LOG_TRACE("Found unresolved microprogram jump from 0x{:02X}", compiler.firstFree);
@@ -191,10 +190,7 @@ namespace MiMa {
 			uint8_t firstFreeCopy = compiler.firstFree;
 			std::shared_ptr<MicroProgramCode[]>& memoryReference = compiler.memory;
 			std::function<bool(const uint8_t&)> x = [firstFreeCopy, memoryReference](const uint8_t& labelAddress) {
-				uint32_t currentCode = memoryReference[firstFreeCopy].getBits(0);
-				currentCode &= ~JUMP_MASK;
-				currentCode |= labelAddress;
-				memoryReference[firstFreeCopy] = MicroProgramCode(currentCode);
+				memoryReference[firstFreeCopy].setJump(labelAddress);
 				
 				return true;
 			};
@@ -205,19 +201,17 @@ namespace MiMa {
 	}
 
 
-	void MicroProgramCompiler::CompileMode::endOfLine(bool& fixedJump, uint32_t& currentCode) {
+	void MicroProgramCompiler::CompileMode::endOfLine(bool& fixedJump, MicroProgramCode& currentCode) {
 		if (!fixedJump) {
-			MIMA_LOG_TRACE("Setting automatic jump to next address 0x{:02X} for microprogram instruction 0x{:08X}", compiler.firstFree + 1, currentCode);
-			currentCode |= (compiler.firstFree + 1);
+			MIMA_LOG_TRACE("Setting automatic jump to next address 0x{:02X} for microprogram instruction {}", compiler.firstFree + 1, currentCode);
+			currentCode.setJump(compiler.firstFree + 1);
 		}
 
-		compiler.memory[compiler.firstFree] = MicroProgramCode(currentCode);
-		MIMA_LOG_TRACE("Compiled microcode 0x{:08X}, stored at 0x{:02X}", currentCode, compiler.firstFree);
+		MIMA_LOG_TRACE("Compiled at 0x{:02X}: microcode {}", compiler.firstFree, currentCode);
 
 		fixedJump = false;
 		compiler.firstFree++;
 		MIMA_ASSERT_WARN(compiler.firstFree != 0, "Memory position overflow in compilation, continuing to compile at 0x00.");
-		currentCode = 0;
 
 		compiler.lineStart = true;
 	}
@@ -262,7 +256,7 @@ namespace MiMa {
 		case char_BREAK:
 			//if the token is empty, the break operator stands for end-of-line
 			if (*token == 0) {
-				CompileMode::endOfLine(fixedJump, currentCode);
+				CompileMode::endOfLine(fixedJump, compiler.memory[compiler.firstFree]);
 				break;
 			}
 
@@ -273,7 +267,7 @@ namespace MiMa {
 					operatorBuffer.discardBuffer();
 				}
 
-				CompileMode::addJump(token + 1, fixedJump, currentCode);
+				CompileMode::addJump(token + 1, fixedJump, compiler.memory[compiler.firstFree]);
 				compiler.lineStart = false;
 				break;
 			}
@@ -281,7 +275,7 @@ namespace MiMa {
 			MIMA_ASSERT_WARN(operatorBuffer.isBufferOccupied(), "Found token '{}' with no preceeding binary operator", token);
 			if (operatorBuffer.isBufferOccupied()) {
 				//execute binary operation
-				currentCode |= operatorBuffer.apply(token);
+				compiler.memory[compiler.firstFree].addBits(operatorBuffer.apply(token));
 			}
 			break;
 		default:
@@ -297,7 +291,7 @@ namespace MiMa {
 
 	void MicroProgramCompiler::DefaultCompileMode::finish(char* finish) {
 		MIMA_ASSERT_ERROR(!operatorBuffer.isBufferOccupied(), "Binary operator remaining after finishing compilation with remaining operand");
-		MIMA_ASSERT_ERROR(currentCode == 0, "Failed to write last line in compilation 0x({:08X}) into dedicated memory position 0x{:02X}", currentCode, compiler.firstFree);
+		//MIMA_ASSERT_ERROR(currentCode == 0, "Failed to write last line in compilation 0x({:08X}) into dedicated memory position 0x{:02X}", currentCode, compiler.firstFree);
 	}
 
 
