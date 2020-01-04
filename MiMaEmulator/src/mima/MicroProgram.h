@@ -39,7 +39,32 @@ namespace MiMa {
 
 		inline void setJump(const uint8_t& jumpDestination) { bits &= ~JUMP_MASK; bits |= jumpDestination; }
 		inline void addBits(const uint32_t& addedBits) { bits |= addedBits; }
+
+		inline void enableMemoryWrite() { bits |= STORAGE_WRITING; }
+		inline void disableMemoryWrite() { bits &= ~STORAGE_WRITING; }
+		inline void enableMemoryRead() { bits |= STORAGE_READING; }
+		inline void disableMemoryRead() { bits &= ~STORAGE_READING; }
+
+		inline void setDecode(const uint8_t& code) { bits &= ~DECODING; bits |= ((code & 0xF) << 28); }
+		inline void setALUCode(const uint8_t& code) { bits &= ~ALU_C; bits |= ((code & 0x7) << 12); }
+
+		inline void setStorageAddressRegisterReading() { bits |= SAR_READING; }
+		inline void setStorageDataRegisterReading() { bits |= SDR_READING; }
+		inline void setStorageDataRegisterWriting() { bits |= SDR_WRITING; }
+		inline void setInstructionRegisterReading() { bits |= IR_READING; }
+		inline void setInstructionRegisterWriting() { bits |= IR_WRITING; }
+		inline void setInstructionAddressRegisterReading() { bits |= IAR_READING; }
+		inline void setInstructionAddressRegisterWriting() { bits |= IAR_WRITING; }
+		inline void setConstantOneWriting() { bits |= ONE; }
+		inline void setALUResultWriting() { bits |= ALU_RESULT; }
+		inline void setLeftALUOperandReading() { bits |= ALU_LEFT_OPERAND; }
+		inline void setRightALUOperandReading() { bits |= ALU_RIGHT_OPERAND; }
+		inline void setAccumulatorRegisterReading() { bits |= ACCUMULATOR_READING; }
+		inline void setAccumulatorRegisterWriting() { bits |= ACCUMULATOR_WRITING; }
+
+		inline void pass() {} //does nothing
 	};
+	typedef void(MicroProgramCode::* MicroProgramCodeSetFunction)();
 
 	class MicroProgram {
 	private:

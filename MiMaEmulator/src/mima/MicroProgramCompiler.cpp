@@ -61,82 +61,88 @@ namespace MiMa {
 
 
 	//Utility: convert register write identifiers to corresponding control bits
-	uint32_t getWriteBit(const std::string& identifier) {
+	MicroProgramCodeSetFunction getWriteBit(const std::string& identifier) {
 		if (identifier == "SDR")
-			return StatusBit::SDR_WRITING;
+			return &MicroProgramCode::setStorageDataRegisterWriting;
 		if (identifier == "IR")
-			return StatusBit::IR_WRITING;
+			return &MicroProgramCode::setInstructionRegisterWriting;
 		if (identifier == "IAR")
-			return StatusBit::IAR_WRITING;
+			return &MicroProgramCode::setInstructionAddressRegisterWriting;
 		if (identifier == "ONE")
-			return StatusBit::ONE;
+			return &MicroProgramCode::setConstantOneWriting;
 		if (identifier == "Z")
-			return StatusBit::ALU_RESULT;
+			return &MicroProgramCode::setALUResultWriting;
 		if (identifier == "ACCU")
-			return StatusBit::ACCUMULATOR_WRITING;
+			return &MicroProgramCode::setAccumulatorRegisterWriting;
 
-		return 0;
+		return &MicroProgramCode::pass;
 	}
 
 	//Utility: convert register read identifiers to corresponding control bits
-	uint32_t getReadBit(const std::string& identifier) {
+	MicroProgramCodeSetFunction getReadBit(const std::string& identifier) {
 		if (identifier == "SAR")
-			return StatusBit::SAR_READING;
+			return &MicroProgramCode::setStorageAddressRegisterReading;
 		if (identifier == "SDR")
-			return StatusBit::SDR_READING;
+			return &MicroProgramCode::setStorageDataRegisterReading;
 		if (identifier == "IR")
-			return StatusBit::IR_READING;
+			return &MicroProgramCode::setInstructionRegisterReading;
 		if (identifier == "IAR")
-			return StatusBit::IAR_READING;
+			return &MicroProgramCode::setInstructionAddressRegisterReading;
 		if (identifier == "X")
-			return StatusBit::ALU_LEFT_OPERAND;
+			return &MicroProgramCode::setLeftALUOperandReading;
 		if (identifier == "Y")
-			return StatusBit::ALU_RIGHT_OPERAND;
+			return &MicroProgramCode::setRightALUOperandReading;
 		if (identifier == "ACCU")
-			return StatusBit::ACCUMULATOR_READING;
+			return &MicroProgramCode::setAccumulatorRegisterReading;
 
-		return 0;
+		return &MicroProgramCode::pass;
 	}
 
 	//Utility: predefined binary operators in compilation
-	static const std::function<void(MicroProgramCode&)> x = [](MicroProgramCode&) {};
+	static const std::function<void(MicroProgramCode&)> NO_MICROPROGRAM_CODE_MODIFICATION = [](MicroProgramCode&) {};
 
-	BinaryOperator MOVE_OPERATOR = [](const std::string& leftOperand, const std::string& rightOperand) {
-		MicroProgramCodeModifier bitSetter = [leftOperand, rightOperand](MicroProgramCode& microProgramCode) {
-			microProgramCode.addBits(getWriteBit(leftOperand) | getReadBit(rightOperand));
+	BinaryOperator MOVE_OPERATOR = [](const std::string& leftOperand, const std::string& rightOperand)->MicroProgramCodeModifier {
+		MicroProgramCodeSetFunction setWrite = getWriteBit(leftOperand);
+		MicroProgramCodeSetFunction setRead = getReadBit(rightOperand);
+
+		MicroProgramCodeModifier registerTransfer = [setWrite, setRead](MicroProgramCode& microProgramCode) {
+			(microProgramCode.*setWrite)();
+			(microProgramCode.*setRead)();
 		};
-		return bitSetter;
+		return registerTransfer;
 	};
-	BinaryOperator SET_OPERATOR = [](const std::string& leftOperand, const std::string& rightOperand) {
-		uint32_t bits = uint32_t_0;
-
+	BinaryOperator SET_OPERATOR = [](const std::string& leftOperand, const std::string& rightOperand)->MicroProgramCodeModifier {
 		if (leftOperand == "R") {
 			if (rightOperand == "1") {
-				bits = static_cast<typename std::underlying_type<StatusBit>::type>(StatusBit::STORAGE_READING);
+				return [](MicroProgramCode& code) { code.enableMemoryRead(); };
 			}
+			if (rightOperand == "0") {
+				return [](MicroProgramCode& code) { code.disableMemoryRead(); };
+			}
+			return NO_MICROPROGRAM_CODE_MODIFICATION;
 		}
 
 		if (leftOperand == "W") {
 			if (rightOperand == "1") {
-				bits = static_cast<typename std::underlying_type<StatusBit>::type>(StatusBit::STORAGE_WRITING);
+				return [](MicroProgramCode& code) { code.enableMemoryWrite(); };
 			}
+			if (rightOperand == "0") {
+				return [](MicroProgramCode& code) { code.disableMemoryWrite(); };
+			}
+			return NO_MICROPROGRAM_CODE_MODIFICATION;
 		}
 
 		if (leftOperand == "D") {
-			bits = (uint32_t)std::stoi(rightOperand);
-
-			bits &= 0xF;
-			bits = bits << 28;
+			uint8_t decoding = (uint8_t)std::stoi(rightOperand);
+			return [decoding](MicroProgramCode& code) { code.setDecode(decoding); };
 		}
 
 		if (leftOperand == "ALU") {
-			bits = getALUCode(rightOperand) << 12;
+			uint8_t ALUCode = getALUCode(rightOperand);
+			return [ALUCode](MicroProgramCode& code) { code.setALUCode(ALUCode); };
 		}
 
-		MicroProgramCodeModifier bitSetter = [bits](MicroProgramCode& microProgramCode) {
-			microProgramCode.addBits(bits);
-		};
-		return bitSetter;
+		return NO_MICROPROGRAM_CODE_MODIFICATION;
 	};
 
 
@@ -226,7 +232,7 @@ namespace MiMa {
 	
 	MicroProgramCompiler::DefaultCompileMode::DefaultCompileMode(MicroProgramCompiler& compiler) :
 		CompileMode(compiler),
-		operatorBuffer(std::string(""), [](const std::string&, const std::string&) { return x; })
+		operatorBuffer(std::string(""), [](const std::string&, const std::string&) { return NO_MICROPROGRAM_CODE_MODIFICATION; })
 	{}
 
 
