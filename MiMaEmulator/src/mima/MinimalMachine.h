@@ -10,7 +10,7 @@
 #include "debug/Log.h"
 
 namespace MiMa {
-	typedef uint32_t(*InstructionDecodeFunction)(const uint8_t&, const uint8_t&); //arguments: decoding value, opCode
+	typedef MicroProgramCode(*InstructionDecodeFunction)(const uint8_t&, const uint8_t&); //arguments: decoding value, opCode
 
 
 	struct MemoryCell {

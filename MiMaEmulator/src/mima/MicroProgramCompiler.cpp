@@ -99,42 +99,44 @@ namespace MiMa {
 	}
 
 	//Utility: predefined binary operators in compilation
+	static const std::function<void(MicroProgramCode&)> x = [](MicroProgramCode&) {};
+
 	BinaryOperator MOVE_OPERATOR = [](const std::string& leftOperand, const std::string& rightOperand) {
-		return getWriteBit(leftOperand) | getReadBit(rightOperand);
+		MicroProgramCodeModifier bitSetter = [leftOperand, rightOperand](MicroProgramCode& microProgramCode) {
+			microProgramCode.addBits(getWriteBit(leftOperand) | getReadBit(rightOperand));
+		};
+		return bitSetter;
 	};
 	BinaryOperator SET_OPERATOR = [](const std::string& leftOperand, const std::string& rightOperand) {
+		uint32_t bits = uint32_t_0;
+
 		if (leftOperand == "R") {
 			if (rightOperand == "1") {
-				return static_cast<typename std::underlying_type<StatusBit>::type>(StatusBit::STORAGE_READING);
-			}
-			else {
-				return uint32_t_0;
+				bits = static_cast<typename std::underlying_type<StatusBit>::type>(StatusBit::STORAGE_READING);
 			}
 		}
 
 		if (leftOperand == "W") {
 			if (rightOperand == "1") {
-				return static_cast<typename std::underlying_type<StatusBit>::type>(StatusBit::STORAGE_WRITING);
-			}
-			else {
-				return uint32_t_0;
+				bits = static_cast<typename std::underlying_type<StatusBit>::type>(StatusBit::STORAGE_WRITING);
 			}
 		}
 
 		if (leftOperand == "D") {
-			uint32_t finalValue = (uint32_t)std::stoi(rightOperand);
+			bits = (uint32_t)std::stoi(rightOperand);
 
-			finalValue &= 0xF;
-			finalValue = finalValue << 28;
-
-			return finalValue;
+			bits &= 0xF;
+			bits = bits << 28;
 		}
 
 		if (leftOperand == "ALU") {
-			return getALUCode(rightOperand) << 12;
+			bits = getALUCode(rightOperand) << 12;
 		}
 
-		return uint32_t_0;
+		MicroProgramCodeModifier bitSetter = [bits](MicroProgramCode& microProgramCode) {
+			microProgramCode.addBits(bits);
+		};
+		return bitSetter;
 	};
 
 
@@ -224,7 +226,7 @@ namespace MiMa {
 	
 	MicroProgramCompiler::DefaultCompileMode::DefaultCompileMode(MicroProgramCompiler& compiler) :
 		CompileMode(compiler),
-		operatorBuffer(std::string(""), [](const std::string&, const std::string&) { return uint32_t_0; })
+		operatorBuffer(std::string(""), [](const std::string&, const std::string&) { return x; })
 	{}
 
 
@@ -275,7 +277,7 @@ namespace MiMa {
 			MIMA_ASSERT_WARN(operatorBuffer.isBufferOccupied(), "Found token '{}' with no preceeding binary operator", token);
 			if (operatorBuffer.isBufferOccupied()) {
 				//execute binary operation
-				compiler.memory[compiler.firstFree].addBits(operatorBuffer.apply(token));
+				operatorBuffer.apply(token)(compiler.memory[compiler.firstFree]);
 			}
 			break;
 		default:
@@ -305,7 +307,7 @@ namespace MiMa {
 
 		//0xFF is reserved for halt
 		labels.insert({ "halt", HALT_RESERVED });
-		memory[HALT_RESERVED] = MicroProgramCode(HALT_RESERVED);
+		memory[HALT_RESERVED].setJump(HALT_RESERVED);
 
 		MIMA_LOG_INFO("Initialized microcode compiler");
 	};

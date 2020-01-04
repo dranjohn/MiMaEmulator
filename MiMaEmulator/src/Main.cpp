@@ -8,7 +8,7 @@
 #include "debug/Log.h"
 
 
-uint32_t decodeInstructionJump(const uint8_t&, const uint8_t& opCode) {
+MiMa::MicroProgramCode decodeInstructionJump(const uint8_t&, const uint8_t& opCode) {
 	uint8_t shortOpCode = (opCode & 0xF0) >> 4;
 	
 	uint32_t nextAddress = 0;
@@ -17,7 +17,8 @@ uint32_t decodeInstructionJump(const uint8_t&, const uint8_t& opCode) {
 
 		switch (opCodeExtension) {
 		case 0:
-			return 0xFF;
+			nextAddress = 0xFF;
+			break;
 		}
 	}
 	else { //use shortOpCode
@@ -40,7 +41,9 @@ uint32_t decodeInstructionJump(const uint8_t&, const uint8_t& opCode) {
 		}
 	}
 
-	return nextAddress;
+	MiMa::MicroProgramCode code;
+	code.setJump(nextAddress);
+	return code;
 }
 
 int main() {
@@ -72,10 +75,6 @@ int main() {
 		"R = 1;;\n"
 		"SDR > Y; ALU = AND; #ret;;\n";
 	MiMa::MicroProgram instructionDecoder = MiMa::MicroProgramCompiler::compile(instructionDecoderCode);
-
-	/*for (int i = 0; i < 0x18; i++) {
-		MIMA_LOG_INFO("Bits for 0x{:02}: {}", i, instructionDecoder.getMicroCode(i, 0).getBits(0));
-	}*/
 
 	memory[0x00] = { 0x0000FF };
 	memory[0x01] = { 0x300020 };

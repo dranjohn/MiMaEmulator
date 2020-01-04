@@ -47,7 +47,7 @@ namespace MiMa {
 		if (decoding > 0) {
 			MIMA_LOG_TRACE("Found decoding state 0x{:02X}", decoding);
 
-			microCode = MicroProgramCode(decodingFunction(decoding, opCode));
+			microCode = decodingFunction(decoding, opCode);
 			MIMA_LOG_TRACE("New microcode is {}", microCode);
 		}
 

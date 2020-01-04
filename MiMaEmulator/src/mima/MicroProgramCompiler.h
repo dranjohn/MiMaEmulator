@@ -17,7 +17,8 @@
 
 namespace MiMa {
 	//Utility: binary operators understandable by the micro program compiler
-	typedef uint32_t(*BinaryOperator)(const std::string&, const std::string&);
+	typedef std::function<void(MicroProgramCode&)> MicroProgramCodeModifier;
+	typedef MicroProgramCodeModifier(*BinaryOperator)(const std::string&, const std::string&);
 
 	class MicroProgramCompiler {
 	private:
@@ -49,7 +50,7 @@ namespace MiMa {
 			bool fixedJump = false;
 
 			//binary operator buffers
-			BinaryOperatorBuffer<std::string, uint32_t> operatorBuffer;
+			BinaryOperatorBuffer<std::string, MicroProgramCodeModifier> operatorBuffer;
 		public:
 			DefaultCompileMode(MicroProgramCompiler& compiler);
 

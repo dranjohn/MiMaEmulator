@@ -15,13 +15,9 @@ namespace MiMa {
 	private:
 		static const uint32_t JUMP_MASK = 0xFF;
 
-		uint32_t bits;
+		uint32_t bits = 0;
 
 	public:
-		MicroProgramCode(const uint32_t& bits = 0) : bits(bits) {}
-
-		uint32_t getBits(const uint8_t& opCode) const { return bits; }
-
 		inline uint8_t getNextInstructionDecoderState() const { return (uint8_t)(bits & FOLLOWING_ADDRESS); }
 		inline bool isWritingToMemory() const { return bits & STORAGE_WRITING; }
 		inline bool isReadingFromMemory() const { return bits & STORAGE_READING; }
