@@ -2,11 +2,16 @@
 
 #include <cstdint>
 #include <memory>
+#include <algorithm>
+#include <functional>
 
 #include <fmt/format.h>
 
 #include "util/CharStream.h"
 #include "StatusBit.h"
+
+#include "debug/Log.h"
+
 
 namespace MiMa {
 	class MicroProgramCode {
@@ -38,7 +43,7 @@ namespace MiMa {
 		inline uint8_t getDecodingBits() const { return (uint8_t)((bits & DECODING) >> 28); }
 
 		inline void setJump(const uint8_t& jumpDestination) { bits &= ~JUMP_MASK; bits |= jumpDestination; }
-		inline void addBits(const uint32_t& addedBits) { bits |= addedBits; }
+		//inline void addBits(const uint32_t& addedBits) { bits |= addedBits; }
 
 		inline void enableMemoryWrite() { bits |= STORAGE_WRITING; }
 		inline void disableMemoryWrite() { bits &= ~STORAGE_WRITING; }
@@ -65,6 +70,116 @@ namespace MiMa {
 		inline void pass() {} //does nothing
 	};
 	typedef void(MicroProgramCode::* MicroProgramCodeSetFunction)();
+	typedef void(MicroProgramCode::* MicroProgramCodeSet8BitFunction)(const uint8_t&);
+	
+
+	template<size_t opCodeMax>
+	class MicroProgramCodeNode;
+
+	template<size_t opCodeMax>
+	class MicroProgramCodeList {
+	private:
+		MicroProgramCodeNode<opCodeMax>* head = new MicroProgramCodeNode<opCodeMax>();
+
+	public:
+		void apply(const MicroProgramCodeSetFunction& func, const size_t& lowerLimit = 0, size_t upperLimit = opCodeMax) {
+			upperLimit = std::min(upperLimit, opCodeMax);
+
+			MicroProgramCodeNode<opCodeMax>* prev = nullptr;
+			MicroProgramCodeNode<opCodeMax>* current = head;
+
+			//find the first node which is affected by the application of the microprogram code function,
+			//i.e. the first node which has an upper limit equal or above the lower limit of the effect
+			//=> the previous node has an upper limit equal or below the lower limit
+			while (current->opCodeUpperLimit < lowerLimit) {
+				prev = current;
+				current = current->next;
+			}
+
+			//in case the previous node has an upper limit below the lower limit
+			if (prev == nullptr) {
+				if (lowerLimit != 0) {
+					size_t limitingNodeLimit = lowerLimit - 1;
+
+					head = new MicroProgramCodeNode<opCodeMax>(head, head->code, limitingNodeLimit);
+					prev = head;
+				}
+			}
+			else {
+				if (prev->opCodeUpperLimit + 1 != lowerLimit) {
+					size_t limitingNodeLimit = lowerLimit - 1;
+
+					prev->next = new MicroProgramCodeNode<opCodeMax>(current, current->code, limitingNodeLimit);
+					prev = prev->next;
+				}
+			}
+
+			//apply function to all nodes with an upper limit under the given upper limit
+			while (current->opCodeUpperLimit < upperLimit) {
+				std::invoke(func, current->code);
+
+				prev = current;
+				current = current->next;
+			}
+
+			//if there is a node matching the given upper limit, apply the function to it as well and return
+			if (current->opCodeUpperLimit == upperLimit) {
+				std::invoke(func, current->code);
+				return;
+			}
+
+			//if there is no node matching the given upper limit, create one and apply the function to it as well
+			MicroProgramCodeNode<opCodeMax>* upperLimitNode = new MicroProgramCodeNode<opCodeMax>(current, current->code, upperLimit);
+			
+			if (prev == nullptr) {
+				head = upperLimitNode;
+			}
+			else {
+				prev->next = upperLimitNode;
+			}
+			std::invoke(func, upperLimitNode->code);
+		}
+
+		void apply(const MicroProgramCodeSet8BitFunction& func, const uint8_t& value, const size_t& lowerLimit = 0, const size_t& upperLimit = opCodeMax) {
+
+		}
+
+
+		MicroProgramCode get(size_t opCode) {
+			opCode = std::min(opCode, opCodeMax);
+			MicroProgramCodeNode<opCodeMax>* current = head;
+
+			while (current->opCodeUpperLimit < opCode) {
+				current = current->next;
+			}
+
+			return current->code;
+		}
+
+
+		void print() {
+			MicroProgramCodeNode<opCodeMax>* current = head;
+			while (current != nullptr) {
+				MIMA_LOG_INFO("node with max {:04X} and code {}", current->opCodeUpperLimit, current->code);
+				current = current->next;
+			}
+			MIMA_LOG_INFO("-----");
+		}
+	};
+
+	template<size_t opCodeMax>
+	class MicroProgramCodeNode {
+		friend class MicroProgramCodeList<opCodeMax>;
+
+	private:
+		MicroProgramCodeNode<opCodeMax>* next;
+
+		size_t opCodeUpperLimit;
+		MicroProgramCode code;
+
+		MicroProgramCodeNode(MicroProgramCodeNode<opCodeMax>* next = nullptr, MicroProgramCode code = MicroProgramCode(), size_t opCodeUpperLimit = opCodeMax) : next(next), code(code), opCodeUpperLimit(opCodeUpperLimit) {}
+	};
+
 
 	class MicroProgram {
 	private:
