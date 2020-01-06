@@ -81,8 +81,7 @@ namespace MiMa {
 	private:
 		MicroProgramCodeNode<opCodeMax>* head = new MicroProgramCodeNode<opCodeMax>();
 
-	public:
-		void apply(const MicroProgramCodeSetFunction& func, const size_t& lowerLimit = 0, size_t upperLimit = opCodeMax) {
+		void apply(const std::function<void(MicroProgramCode&)>& func, const size_t& lowerLimit, size_t upperLimit) {
 			upperLimit = std::min(upperLimit, opCodeMax);
 
 			MicroProgramCodeNode<opCodeMax>* prev = nullptr;
@@ -116,7 +115,7 @@ namespace MiMa {
 
 			//apply function to all nodes with an upper limit under the given upper limit
 			while (current->opCodeUpperLimit < upperLimit) {
-				std::invoke(func, current->code);
+				func(current->code);
 
 				prev = current;
 				current = current->next;
@@ -124,24 +123,41 @@ namespace MiMa {
 
 			//if there is a node matching the given upper limit, apply the function to it as well and return
 			if (current->opCodeUpperLimit == upperLimit) {
-				std::invoke(func, current->code);
+				func(current->code);
 				return;
 			}
 
 			//if there is no node matching the given upper limit, create one and apply the function to it as well
 			MicroProgramCodeNode<opCodeMax>* upperLimitNode = new MicroProgramCodeNode<opCodeMax>(current, current->code, upperLimit);
-			
+
 			if (prev == nullptr) {
 				head = upperLimitNode;
 			}
 			else {
 				prev->next = upperLimitNode;
 			}
-			std::invoke(func, upperLimitNode->code);
+			func(upperLimitNode->code);
 		}
 
-		void apply(const MicroProgramCodeSet8BitFunction& func, const uint8_t& value, const size_t& lowerLimit = 0, const size_t& upperLimit = opCodeMax) {
+	public:
+		~MicroProgramCodeList() {
+			MicroProgramCodeNode<opCodeMax>* current = head;
+			MicroProgramCodeNode<opCodeMax>* next;
 
+			while (current != nullptr) {
+				next = current->next;
+				delete current;
+
+				current = next;
+			}
+		}
+
+		inline void apply(const MicroProgramCodeSetFunction& func, const size_t& lowerLimit = 0, size_t upperLimit = opCodeMax) {
+			apply([func](MicroProgramCode& microProgramCode) { std::invoke(func, microProgramCode); }, lowerLimit, upperLimit);
+		}
+
+		inline void apply(const MicroProgramCodeSet8BitFunction& func, const uint8_t& value, const size_t& lowerLimit = 0, const size_t& upperLimit = opCodeMax) {
+			apply([func, value](MicroProgramCode& microProgramCode) { std::invoke(std::bind(func, std::placeholders::_1, value), microProgramCode); }, lowerLimit, upperLimit);
 		}
 
 

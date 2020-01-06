@@ -87,17 +87,5 @@ int main() {
 	mima.emulateLifeTime();
 	mima.printState();
 
-
-	//Test area
-	MiMa::MicroProgramCodeList<0xFF> list;
-	list.print();
-
-	list.apply(&MiMa::MicroProgramCode::enableMemoryRead);
-	list.print();
-
-	list.apply(&MiMa::MicroProgramCode::setAccumulatorRegisterReading, 0x70, 0x90);
-	list.print();
-
-	
 	return 0;
 }
