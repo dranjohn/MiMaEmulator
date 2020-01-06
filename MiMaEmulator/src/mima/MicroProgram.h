@@ -77,11 +77,32 @@ namespace MiMa {
 	class MicroProgramCodeNode;
 
 	template<size_t opCodeMax>
+	class MicroProgramCodeList;
+
+	template<size_t opCodeMax>
+	struct fmt::formatter<MiMa::MicroProgramCodeList<opCodeMax>>;
+
+	template<size_t opCodeMax>
 	class MicroProgramCodeList {
+		friend fmt::formatter<MiMa::MicroProgramCodeList<opCodeMax>>;
 	private:
 		MicroProgramCodeNode<opCodeMax>* head = new MicroProgramCodeNode<opCodeMax>();
 
-		void apply(const std::function<void(MicroProgramCode&)>& func, const size_t& lowerLimit, size_t upperLimit) {
+	public:
+		~MicroProgramCodeList() {
+			MicroProgramCodeNode<opCodeMax>* current = head;
+			MicroProgramCodeNode<opCodeMax>* next;
+
+			while (current != nullptr) {
+				next = current->next;
+				delete current;
+
+				current = next;
+			}
+		}
+
+
+		void apply(const std::function<void(MicroProgramCode&)>& func, const size_t& lowerLimit = 0, size_t upperLimit = opCodeMax) {
 			upperLimit = std::min(upperLimit, opCodeMax);
 
 			MicroProgramCodeNode<opCodeMax>* prev = nullptr;
@@ -139,19 +160,6 @@ namespace MiMa {
 			func(upperLimitNode->code);
 		}
 
-	public:
-		~MicroProgramCodeList() {
-			MicroProgramCodeNode<opCodeMax>* current = head;
-			MicroProgramCodeNode<opCodeMax>* next;
-
-			while (current != nullptr) {
-				next = current->next;
-				delete current;
-
-				current = next;
-			}
-		}
-
 		inline void apply(const MicroProgramCodeSetFunction& func, const size_t& lowerLimit = 0, size_t upperLimit = opCodeMax) {
 			apply([func](MicroProgramCode& microProgramCode) { std::invoke(func, microProgramCode); }, lowerLimit, upperLimit);
 		}
@@ -170,16 +178,6 @@ namespace MiMa {
 			}
 
 			return current->code;
-		}
-
-
-		void print() {
-			MicroProgramCodeNode<opCodeMax>* current = head;
-			while (current != nullptr) {
-				MIMA_LOG_INFO("node with max {:04X} and code {}", current->opCodeUpperLimit, current->code);
-				current = current->next;
-			}
-			MIMA_LOG_INFO("-----");
 		}
 	};
 
@@ -200,11 +198,11 @@ namespace MiMa {
 	class MicroProgram {
 	private:
 		//minimal machine microprogram read-only memory
-		std::shared_ptr<MicroProgramCode[]> memory;
+		std::shared_ptr<MicroProgramCodeList<0x100>[]> memory;
 	public:
-		MicroProgram(const std::shared_ptr<MicroProgramCode[]>& memory) : memory(memory) {}
+		MicroProgram(const std::shared_ptr<MicroProgramCodeList<0x100>[]>& memory) : memory(memory) {}
 
-		inline const MicroProgramCode getMicroCode(const uint8_t& memoryAddress, const uint8_t& opCode) const { return memory[memoryAddress]; }
+		inline const MicroProgramCode getMicroCode(const uint8_t& memoryAddress, const uint8_t& opCode) const { return memory[memoryAddress].get(opCode); }
 	};
 }
 
@@ -215,4 +213,12 @@ struct fmt::formatter<MiMa::MicroProgramCode> {
 
 	template<typename FormatContext>
 	auto format(const MiMa::MicroProgramCode& code, FormatContext& ctx) { return fmt::format_to(ctx.out(), "0x{:07X}", code.bits); }
+};
+
+template<size_t opCodeMax>
+struct fmt::formatter<MiMa::MicroProgramCodeList<opCodeMax>> {
+	constexpr auto parse(format_parse_context& ctx) { return ctx.end(); }
+
+	template<typename FormatContext>
+	auto format(const MiMa::MicroProgramCodeList<opCodeMax>& codeList, FormatContext& ctx) { return fmt::format_to(ctx.out(), "<microprogram code list>"); } //TODO: add meaningful format
 };

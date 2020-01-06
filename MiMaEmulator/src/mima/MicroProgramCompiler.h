@@ -30,10 +30,10 @@ namespace MiMa {
 			//adds a new label and resolves unresolved jumps to the given label
 			void addLabel(std::string label);
 			//adds a jump instruction to the current microcode
-			void addJump(std::string label, bool& fixedJump, MicroProgramCode& currentCode, bool overrideFixed = false);
+			void addJump(std::string label, bool& fixedJump, MicroProgramCodeList<0x100>& currentCode, bool overrideFixed = false);
 
 			//ends the current line
-			void endOfLine(bool& fixedJump, MicroProgramCode& currentCode);
+			void endOfLine(bool& fixedJump, MicroProgramCodeList<0x100>& currentCode);
 		public:
 			virtual bool isControl(const char& control) = 0;
 			virtual void addToken(const char& control, char* token) = 0;
@@ -67,7 +67,7 @@ namespace MiMa {
 		std::unique_ptr<CompileMode> currentCompileMode;
 
 		//a pointer to the memory to manipulate
-		std::shared_ptr<MicroProgramCode[]> memory;
+		std::shared_ptr<MicroProgramCodeList<0x100>[]> memory;
 		uint8_t firstFree = 0;
 
 		//label tracking

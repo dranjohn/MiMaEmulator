@@ -177,7 +177,7 @@ namespace MiMa {
 		}
 	}
 
-	void MicroProgramCompiler::CompileMode::addJump(std::string label, bool& fixedJump, MicroProgramCode& currentCode, bool overrideFixed) {
+	void MicroProgramCompiler::CompileMode::addJump(std::string label, bool& fixedJump, MicroProgramCodeList<0x100>& currentCode, bool overrideFixed) {
 		//confirm that this can jump instruction can be set
 		if (fixedJump && !overrideFixed) {
 			MIMA_LOG_WARN("Attempted to override fixed jump at position 0x{:02X}", compiler.firstFree);
@@ -190,15 +190,15 @@ namespace MiMa {
 
 		if (labelLocation != compiler.labels.end()) { //label found
 			MIMA_LOG_TRACE("Found microprogram jump instruction from 0x{:02X} to 0x{:02X}", compiler.firstFree, labelLocation->second);
-			currentCode.setJump(labelLocation->second);
+			currentCode.apply(&MicroProgramCode::setJump, labelLocation->second);
 		}
 		else { //label not found, add this to unresolved references
 			MIMA_LOG_TRACE("Found unresolved microprogram jump from 0x{:02X}", compiler.firstFree);
 
 			uint8_t firstFreeCopy = compiler.firstFree;
-			std::shared_ptr<MicroProgramCode[]>& memoryReference = compiler.memory;
+			std::shared_ptr<MicroProgramCodeList<0x100>[]>& memoryReference = compiler.memory;
 			std::function<bool(const uint8_t&)> x = [firstFreeCopy, memoryReference](const uint8_t& labelAddress) {
-				memoryReference[firstFreeCopy].setJump(labelAddress);
+				memoryReference[firstFreeCopy].apply(&MicroProgramCode::setJump, labelAddress);
 				
 				return true;
 			};
@@ -209,10 +209,10 @@ namespace MiMa {
 	}
 
 
-	void MicroProgramCompiler::CompileMode::endOfLine(bool& fixedJump, MicroProgramCode& currentCode) {
+	void MicroProgramCompiler::CompileMode::endOfLine(bool& fixedJump, MicroProgramCodeList<0x100>& currentCode) {
 		if (!fixedJump) {
 			MIMA_LOG_TRACE("Setting automatic jump to next address 0x{:02X} for microprogram instruction {}", compiler.firstFree + 1, currentCode);
-			currentCode.setJump(compiler.firstFree + 1);
+			currentCode.apply(&MicroProgramCode::setJump, compiler.firstFree + 1);
 		}
 
 		MIMA_LOG_TRACE("Compiled at 0x{:02X}: microcode {}", compiler.firstFree, currentCode);
@@ -283,7 +283,7 @@ namespace MiMa {
 			MIMA_ASSERT_WARN(operatorBuffer.isBufferOccupied(), "Found token '{}' with no preceeding binary operator", token);
 			if (operatorBuffer.isBufferOccupied()) {
 				//execute binary operation
-				operatorBuffer.apply(token)(compiler.memory[compiler.firstFree]);
+				compiler.memory[compiler.firstFree].apply(operatorBuffer.apply(token));
 			}
 			break;
 		default:
@@ -308,12 +308,12 @@ namespace MiMa {
 	// Microprogram compiler
 	// ---------------------
 
-	MicroProgramCompiler::MicroProgramCompiler() : memory(new MicroProgramCode[0x100]) {
+	MicroProgramCompiler::MicroProgramCompiler() : memory(new MicroProgramCodeList<0x100>[0x100]) {
 		currentCompileMode.reset(new DefaultCompileMode(*this));
 
 		//0xFF is reserved for halt
 		labels.insert({ "halt", HALT_RESERVED });
-		memory[HALT_RESERVED].setJump(HALT_RESERVED);
+		memory[HALT_RESERVED].apply(&MicroProgramCode::setJump, HALT_RESERVED);
 
 		MIMA_LOG_INFO("Initialized microcode compiler");
 	};
