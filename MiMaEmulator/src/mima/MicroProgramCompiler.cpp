@@ -36,6 +36,10 @@ namespace MiMa {
 	constexpr char char_JUMP = '#';
 	constexpr char char_MOVE = '>';
 	constexpr char char_SET = '=';
+
+	constexpr char char_RANGE_LOWER_LIMIT = '+';
+	constexpr char char_RANGE_UPPER_LIMIT = '-';
+
 	constexpr char char_BREAK = ';';
 	constexpr char char_COMPILER_DIRECTIVE = '!';
 
@@ -160,14 +164,11 @@ namespace MiMa {
 
 		//call all listeners waiting for this label to be added
 		std::multimap<std::string, std::function<bool(const uint8_t&)>>::iterator labelAddListener = compiler.labelAddListeners.find(label);
+		std::multimap<std::string, std::function<bool(const uint8_t&)>>::iterator mapEnd = compiler.labelAddListeners.end();
 
-		if (labelAddListener == compiler.labelAddListeners.end()) {
-			return;
-		}
-
-		while (labelAddListener->first == label) {
+		while (labelAddListener != mapEnd && labelAddListener->first == label) {
 			if ((labelAddListener->second)(compiler.firstFree)) {
-				labelAddListener = compiler.labelAddListeners.erase(labelAddListener);
+				labelAddListener = compiler.labelAddListeners.erase(labelAddListener++);
 			}
 			else {
 				++labelAddListener;
@@ -177,7 +178,7 @@ namespace MiMa {
 		}
 	}
 
-	void MicroProgramCompiler::CompileMode::addJump(std::string label, bool& fixedJump, MicroProgramCodeList<0x100>& currentCode, bool overrideFixed) {
+	void MicroProgramCompiler::CompileMode::addJump(std::string label, bool& fixedJump, MicroProgramCodeList<0xFF>& currentCode, bool overrideFixed) {
 		//confirm that this can jump instruction can be set
 		if (fixedJump && !overrideFixed) {
 			MIMA_LOG_WARN("Attempted to override fixed jump at position 0x{:02X}", compiler.firstFree);
@@ -196,20 +197,55 @@ namespace MiMa {
 			MIMA_LOG_TRACE("Found unresolved microprogram jump from 0x{:02X}", compiler.firstFree);
 
 			uint8_t firstFreeCopy = compiler.firstFree;
-			std::shared_ptr<MicroProgramCodeList<0x100>[]>& memoryReference = compiler.memory;
-			std::function<bool(const uint8_t&)> x = [firstFreeCopy, memoryReference](const uint8_t& labelAddress) {
+			std::shared_ptr<MicroProgramCodeList<0xFF>[]>& memoryReference = compiler.memory;
+			std::function<bool(const uint8_t&)> labelAddListener = [firstFreeCopy, memoryReference](const uint8_t& labelAddress) {
 				memoryReference[firstFreeCopy].apply(&MicroProgramCode::setJump, labelAddress);
 				
 				return true;
 			};
+
+			compiler.labelAddListeners.insert({ label, labelAddListener });
 		}
 
 		//mark this instruction as having a fixed jump location
 		fixedJump = true;
 	}
 
+	void MicroProgramCompiler::CompileMode::addJump(std::string label, MicroProgramCodeList<0xFF>& currentCode, const size_t& lowerLimit, const size_t& upperLimit) {
+		//find label location (ignoring the jump marker)
+		std::unordered_map<std::string, uint8_t>::iterator labelLocation = compiler.labels.find(label);
 
-	void MicroProgramCompiler::CompileMode::endOfLine(bool& fixedJump, MicroProgramCodeList<0x100>& currentCode) {
+		if (labelLocation != compiler.labels.end()) { //label found
+			MIMA_LOG_TRACE("Found microprogram jump instruction from 0x{:02X} to 0x{:02X} in range from 0x{:08X} to 0x{:08X}", compiler.firstFree, labelLocation->second, lowerLimit, upperLimit);
+			currentCode.apply(&MicroProgramCode::setJump, labelLocation->second, lowerLimit, upperLimit);
+		}
+		else { //label not found, add this to unresolved references
+			MIMA_LOG_TRACE("Found unresolved microprogram jump from 0x{:02X} for range from 0x{:08X} to 0x{:08X}", compiler.firstFree, lowerLimit, upperLimit);
+
+			uint8_t firstFreeCopy = compiler.firstFree;
+			std::shared_ptr<MicroProgramCodeList<0xFF>[]>& memoryReference = compiler.memory;
+			std::function<bool(const uint8_t&)> labelAddListener = [firstFreeCopy, memoryReference, lowerLimit, upperLimit](const uint8_t& labelAddress) {
+				memoryReference[firstFreeCopy].apply(&MicroProgramCode::setJump, labelAddress, lowerLimit, upperLimit);
+				MIMA_LOG_TRACE("Resolved label at 0x{:02X} to 0x{:02X} for range from 0x{:08X} to 0x{:08X}, current value: {}", firstFreeCopy, labelAddress, lowerLimit, upperLimit, memoryReference[firstFreeCopy]);
+
+				return true;
+			};
+
+			compiler.labelAddListeners.insert({ label, labelAddListener });
+		}
+	}
+
+
+	void MicroProgramCompiler::CompileMode::endOfLine(MicroProgramCodeList<0xFF>& currentCode) {
+		MIMA_LOG_TRACE("Compiled at 0x{:02X}: microcode {}", compiler.firstFree, currentCode);
+
+		compiler.firstFree++;
+		MIMA_ASSERT_WARN(compiler.firstFree != 0, "Memory position overflow in compilation, continuing to compile at 0x00.");
+
+		compiler.lineStart = true;
+	}
+
+	void MicroProgramCompiler::CompileMode::endOfLine(bool& fixedJump, MicroProgramCodeList<0xFF>& currentCode) {
 		if (!fixedJump) {
 			MIMA_LOG_TRACE("Setting automatic jump to next address 0x{:02X} for microprogram instruction {}", compiler.firstFree + 1, currentCode);
 			currentCode.apply(&MicroProgramCode::setJump, compiler.firstFree + 1);
@@ -297,9 +333,75 @@ namespace MiMa {
 		MIMA_LOG_TRACE("Closing default compiler mode");
 	}
 
-	void MicroProgramCompiler::DefaultCompileMode::finish(char* finish) {
+	void MicroProgramCompiler::DefaultCompileMode::finish(char* remaining) {
 		MIMA_ASSERT_ERROR(!operatorBuffer.isBufferOccupied(), "Binary operator remaining after finishing compilation with remaining operand");
 		//MIMA_ASSERT_ERROR(currentCode == 0, "Failed to write last line in compilation 0x({:08X}) into dedicated memory position 0x{:02X}", currentCode, compiler.firstFree);
+	}
+
+
+
+	// ----------------------------------------------------------
+	// Conditional jump compile mode of the microprogram compiler
+	// ----------------------------------------------------------
+
+	MicroProgramCompiler::ConditionalCompileMode::ConditionalCompileMode(MicroProgramCompiler& compiler) :
+		CompileMode(compiler)
+	{}
+
+
+	bool MicroProgramCompiler::ConditionalCompileMode::isControl(const char& control) {
+		return control == char_RANGE_LOWER_LIMIT
+			|| control == char_RANGE_UPPER_LIMIT
+			|| control == char_BREAK;
+	}
+
+	void MicroProgramCompiler::ConditionalCompileMode::addToken(const char& control, char* token) {
+		switch (control) {
+		case char_RANGE_LOWER_LIMIT:
+			lowerLimit = std::stoi(token);
+			break;
+		case char_RANGE_UPPER_LIMIT:
+			upperLimit = std::stoi(token);
+			break;
+		case char_BREAK:
+			//if the token is empty, the break operator stands for end-of-line
+			if (*token == 0) {
+				CompileMode::endOfLine(compiler.memory[compiler.firstFree]);
+				break;
+			}
+
+			if (*token == '#') {
+				token++;
+				CompileMode::addJump(token, compiler.memory[compiler.firstFree], lowerLimit, upperLimit);
+
+				lowerLimit = 0;
+				upperLimit = MAX_UPPER_LIMIT;
+				break;
+			}
+
+			if (std::string(token) == "next") {
+				compiler.memory[compiler.firstFree].apply(&MicroProgramCode::setJump, compiler.firstFree + 1, lowerLimit, upperLimit);
+				MIMA_LOG_INFO("Added jump to instruction {:02X} in range from {} to {}", compiler.firstFree + 1, lowerLimit, upperLimit);
+
+				lowerLimit = 0;
+				upperLimit = MAX_UPPER_LIMIT;
+				break;
+			}
+
+			break;
+		default:
+			MIMA_LOG_ERROR("Found unknown control symbol '{}'", control);
+			break;
+		}
+	}
+
+
+	void MicroProgramCompiler::ConditionalCompileMode::closeCompileMode() {
+		MIMA_LOG_TRACE("Closing conditional compiler mode");
+	}
+
+	void MicroProgramCompiler::ConditionalCompileMode::finish(char* remaining) {
+
 	}
 
 
@@ -308,7 +410,7 @@ namespace MiMa {
 	// Microprogram compiler
 	// ---------------------
 
-	MicroProgramCompiler::MicroProgramCompiler() : memory(new MicroProgramCodeList<0x100>[0x100]) {
+	MicroProgramCompiler::MicroProgramCompiler() : memory(new MicroProgramCodeList<0xFF>[0x100]) {
 		currentCompileMode.reset(new DefaultCompileMode(*this));
 
 		//0xFF is reserved for halt
@@ -334,7 +436,9 @@ namespace MiMa {
 
 
 		//otherwise, execute compiler directive
-		if (token == "cm_default") {
+		std::string directive(token);
+
+		if (directive == "cm_default") {
 			if (!lineStart) {
 				MIMA_LOG_ERROR("Discarding invalid compiler directive '!cm_default' which is not a line start");
 				return;
@@ -347,19 +451,20 @@ namespace MiMa {
 			return;
 		}
 
-		if (token == "cm_conditionalDecode") {
+		if (directive == "cm_conditional") {
 			if (!lineStart) {
 				MIMA_LOG_ERROR("Discarding invalid compiler directive '!cm_decode' which is not a line start");
 				return;
 			}
 
 			currentCompileMode->closeCompileMode();
+			currentCompileMode.reset(new ConditionalCompileMode(*this));
 
 			MIMA_LOG_TRACE("Switched to a conditional decode compiler compile mode");
 			return;
 		}
 
-		MIMA_LOG_ERROR("Discarding unknwon compiler directive '{}'", token);
+		MIMA_LOG_ERROR("Discarding unknwon compiler directive '{}'", directive);
 	}
 
 

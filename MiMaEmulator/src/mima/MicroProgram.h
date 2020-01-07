@@ -104,6 +104,9 @@ namespace MiMa {
 
 		void apply(const std::function<void(MicroProgramCode&)>& func, const size_t& lowerLimit = 0, size_t upperLimit = opCodeMax) {
 			upperLimit = std::min(upperLimit, opCodeMax);
+			if (lowerLimit > upperLimit) {
+				return;
+			}
 
 			MicroProgramCodeNode<opCodeMax>* prev = nullptr;
 			MicroProgramCodeNode<opCodeMax>* current = head;
@@ -184,6 +187,7 @@ namespace MiMa {
 	template<size_t opCodeMax>
 	class MicroProgramCodeNode {
 		friend class MicroProgramCodeList<opCodeMax>;
+		friend fmt::formatter<MiMa::MicroProgramCodeList<opCodeMax>>;
 
 	private:
 		MicroProgramCodeNode<opCodeMax>* next;
@@ -198,9 +202,9 @@ namespace MiMa {
 	class MicroProgram {
 	private:
 		//minimal machine microprogram read-only memory
-		std::shared_ptr<MicroProgramCodeList<0x100>[]> memory;
 	public:
-		MicroProgram(const std::shared_ptr<MicroProgramCodeList<0x100>[]>& memory) : memory(memory) {}
+		std::shared_ptr<MicroProgramCodeList<0xFF>[]> memory;
+		MicroProgram(const std::shared_ptr<MicroProgramCodeList<0xFF>[]>& memory) : memory(memory) {}
 
 		inline const MicroProgramCode getMicroCode(const uint8_t& memoryAddress, const uint8_t& opCode) const { return memory[memoryAddress].get(opCode); }
 	};
@@ -220,5 +224,23 @@ struct fmt::formatter<MiMa::MicroProgramCodeList<opCodeMax>> {
 	constexpr auto parse(format_parse_context& ctx) { return ctx.end(); }
 
 	template<typename FormatContext>
-	auto format(const MiMa::MicroProgramCodeList<opCodeMax>& codeList, FormatContext& ctx) { return fmt::format_to(ctx.out(), "<microprogram code list>"); } //TODO: add meaningful format
+	auto format(const MiMa::MicroProgramCodeList<opCodeMax>& codeList, FormatContext& ctx) {
+		if (codeList.head->opCodeUpperLimit == opCodeMax) {
+			return fmt::format_to(ctx.out(), "{}", codeList.head->code);
+		}
+
+
+		std::string listOutput = "OpCode conditional:\n{}";
+		std::string nodeFormat = "up to 0x{:02X}: {}\n{{}}";
+
+		MiMa::MicroProgramCodeNode<opCodeMax>* current = codeList.head;
+		while (current != nullptr) {
+			std::string node = fmt::format(nodeFormat, current->opCodeUpperLimit, current->code);
+			listOutput = fmt::format(listOutput, node);
+
+			current = current->next;
+		}
+
+		return fmt::format_to(ctx.out(), listOutput, "");
+	}
 };

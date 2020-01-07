@@ -30,10 +30,12 @@ namespace MiMa {
 			//adds a new label and resolves unresolved jumps to the given label
 			void addLabel(std::string label);
 			//adds a jump instruction to the current microcode
-			void addJump(std::string label, bool& fixedJump, MicroProgramCodeList<0x100>& currentCode, bool overrideFixed = false);
+			void addJump(std::string label, bool& fixedJump, MicroProgramCodeList<0xFF>& currentCode, bool overrideFixed = false);
+			void addJump(std::string label, MicroProgramCodeList<0xFF>& currentCode, const size_t& lowerLimit, const size_t& upperLimit);
 
 			//ends the current line
-			void endOfLine(bool& fixedJump, MicroProgramCodeList<0x100>& currentCode);
+			void endOfLine(MicroProgramCodeList<0xFF>& currentCode);
+			void endOfLine(bool& fixedJump, MicroProgramCodeList<0xFF>& currentCode);
 		public:
 			virtual bool isControl(const char& control) = 0;
 			virtual void addToken(const char& control, char* token) = 0;
@@ -61,13 +63,29 @@ namespace MiMa {
 			void finish(char* remaining) override;
 		};
 
+		class ConditionalCompileMode : public CompileMode {
+		private:
+			const static size_t MAX_UPPER_LIMIT = 0xFF;
+
+			size_t lowerLimit = 0;
+			size_t upperLimit = MAX_UPPER_LIMIT;
+		public:
+			ConditionalCompileMode(MicroProgramCompiler& compiler);
+
+			bool isControl(const char& control) override;
+			void addToken(const char& control, char* token) override;
+
+			void closeCompileMode() override;
+			void finish(char* remaining) override;
+		};
+
 
 	private:
 		//current compile mode
 		std::unique_ptr<CompileMode> currentCompileMode;
 
 		//a pointer to the memory to manipulate
-		std::shared_ptr<MicroProgramCodeList<0x100>[]> memory;
+		std::shared_ptr<MicroProgramCodeList<0xFF>[]> memory;
 		uint8_t firstFree = 0;
 
 		//label tracking

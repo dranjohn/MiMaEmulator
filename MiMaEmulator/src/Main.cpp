@@ -55,7 +55,17 @@ int main() {
 		"ALU = ADD; R = 1;;\n"
 		"Z > IAR;;\n"
 		"SDR > IR;;\n"
-		"D = 1;;\n"
+
+		"cm_conditional!\n"
+		"#halt;\n"
+		"0+ 15- #ldc;\n"
+		"16+ 31- #ldv;\n"
+		"32+ 47- #stv;\n"
+		"48+ 63- #add;\n"
+		"64+ 79- #and;\n"
+		";\n"
+
+		"cm_default!\n"
 		"ret: Z > ACCU; #start;;\n"
 		"ldc: IR > ACCU; #start;;\n"
 		"ldv: IR > SAR; R = 1;;\n"
@@ -75,6 +85,9 @@ int main() {
 		"R = 1;;\n"
 		"SDR > Y; ALU = AND; #ret;;\n";
 	MiMa::MicroProgram instructionDecoder = MiMa::MicroProgramCompiler::compile(instructionDecoderCode);
+	for (int i = 0; i < 0x19; i++) {
+		MIMA_LOG_INFO("Compiled code at 0x{:02X}: {}", i, instructionDecoder.memory[i]);
+	}
 
 	memory[0x00] = { 0x0000FF };
 	memory[0x01] = { 0x300020 };
