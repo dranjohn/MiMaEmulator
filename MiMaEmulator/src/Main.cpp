@@ -18,7 +18,7 @@ int main() {
 		"Z > IAR;;\n"
 		"SDR > IR;;\n\n"
 
-		"cm_conditional!\n"
+		"cm(conditional)!\n"
 		"#halt;\n"
 		"0+ 15- #ldc;\n"
 		"16+ 31- #ldv;\n"
@@ -34,7 +34,7 @@ int main() {
 		"242= #rar;\n"
 		";\n\n"
 
-		"cm_default!\n"
+		"cm(default)!\n"
 		"ret: Z > ACCU; #start;;\n\n"
 
 		"ldc: IR > ACCU; #start;;\n\n"

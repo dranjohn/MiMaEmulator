@@ -1,5 +1,7 @@
 #include "MicroProgramCompiler.h"
 
+#include <regex>
+
 #include "StatusBit.h"
 
 namespace MiMa {
@@ -438,34 +440,52 @@ namespace MiMa {
 
 		//otherwise, execute compiler directive
 		std::string directive(token);
+		std::smatch matches;
 
-		if (directive == "cm_default") {
-			if (!lineStart) {
-				MIMA_LOG_ERROR("Discarding invalid compiler directive '!cm_default' which is not a line start");
-				return;
+		std::regex funcRegex(R"((?:(.*)\((.*)\)))");
+		std::regex paramRegex(R"((.+?)(?:$|,)\s*)");
+
+		if (std::regex_match(directive, matches, funcRegex)) {
+			std::string func = matches[1];
+			std::vector<std::string> arguments;
+
+			std::string parameters = matches[2];
+			while (std::regex_search(parameters, matches, paramRegex)) {
+				arguments.push_back(matches[1]);
+				parameters = matches.suffix();
 			}
 
-			currentCompileMode->closeCompileMode();
-			currentCompileMode.reset(new DefaultCompileMode(*this));
+			if (func == "cm") {
+				if (arguments.size() == 1 && arguments[0] == "default") {
+					if (!lineStart) {
+						MIMA_LOG_ERROR("Discarding invalid compiler directive 'cm(default)!' which is not a line start");
+						return;
+					}
 
-			MIMA_LOG_TRACE("Switched to a default compiler compile mode");
-			return;
-		}
+					currentCompileMode->closeCompileMode();
+					currentCompileMode.reset(new DefaultCompileMode(*this));
 
-		if (directive == "cm_conditional") {
-			if (!lineStart) {
-				MIMA_LOG_ERROR("Discarding invalid compiler directive '!cm_decode' which is not a line start");
-				return;
+					MIMA_LOG_TRACE("Switched to a default compiler compile mode");
+					return;
+					return;
+				}
+
+				if (arguments.size() == 1 && arguments[0] == "conditional") {
+					if (!lineStart) {
+						MIMA_LOG_ERROR("Discarding invalid compiler directive 'cm(conditional)!' which is not a line start");
+						return;
+					}
+
+					currentCompileMode->closeCompileMode();
+					currentCompileMode.reset(new ConditionalCompileMode(*this));
+
+					MIMA_LOG_TRACE("Switched to a conditional decode compiler compile mode");
+					return;
+				}
 			}
-
-			currentCompileMode->closeCompileMode();
-			currentCompileMode.reset(new ConditionalCompileMode(*this));
-
-			MIMA_LOG_TRACE("Switched to a conditional decode compiler compile mode");
-			return;
 		}
 
-		MIMA_LOG_ERROR("Discarding unknwon compiler directive '{}'", directive);
+		MIMA_LOG_ERROR("Discarding unknwon compiler directive '{}!'", directive);
 	}
 
 
