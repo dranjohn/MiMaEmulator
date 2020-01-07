@@ -16,7 +16,7 @@ int main() {
 		"ONE > Y; R = 1;;\n"
 		"ALU = ADD; R = 1;;\n"
 		"Z > IAR;;\n"
-		"SDR > IR;;\n"
+		"SDR > IR;;\n\n"
 
 		"cm_conditional!\n"
 		"#halt;\n"
@@ -25,37 +25,80 @@ int main() {
 		"32+ 47- #stv;\n"
 		"48+ 63- #add;\n"
 		"64+ 79- #and;\n"
-		";\n"
+		"80+ 95- #or;\n"
+		"96+ 111- #xor;\n"
+		"112+ 127- #eql;\n"
+		"128+ 143- #jmp;\n"
+		"144+ 159- #jmn;\n"
+		"241= #not;\n"
+		"242= #rar;\n"
+		";\n\n"
 
 		"cm_default!\n"
-		"ret: Z > ACCU; #start;;\n"
-		"ldc: IR > ACCU; #start;;\n"
+		"ret: Z > ACCU; #start;;\n\n"
+
+		"ldc: IR > ACCU; #start;;\n\n"
+
 		"ldv: IR > SAR; R = 1;;\n"
 		"R = 1;;\n"
 		"R = 1;;\n"
-		"SDR > ACCU; #start;;\n"
+		"SDR > ACCU; #start;;\n\n"
+
 		"stv: IR > SAR;;\n"
 		"ACCU > SDR; W = 1;;\n"
 		"W = 1;;\n"
-		"W = 1; #start;;\n"
+		"W = 1; #start;;\n\n"
+
 		"add: IR > SAR; R = 1;;\n"
 		"ACCU > X; R = 1;;\n"
 		"R = 1;;\n"
-		"SDR > Y; ALU = ADD; #ret;;\n"
+		"SDR > Y; ALU = ADD; #ret;;\n\n"
+
 		"and: IR > SAR; R = 1;;\n"
 		"ACCU > X; R = 1;;\n"
 		"R = 1;;\n"
-		"SDR > Y; ALU = AND; #ret;;\n";
-	MiMa::MicroProgram instructionDecoder = MiMa::MicroProgramCompiler::compile(instructionDecoderCode);
-	for (int i = 0; i < 0x19; i++) {
-		MIMA_LOG_INFO("Compiled code at 0x{:02X}: {}", i, instructionDecoder.memory[i]);
-	}
+		"SDR > Y; ALU = AND; #ret;;\n\n"
+		
+		"or: IR > SAR; R = 1;;\n"
+		"ACCU > X; R = 1;;\n"
+		"R = 1;;\n"
+		"SDR > Y; ALU = OR; #ret;;\n\n"
+		
+		"xor: IR > SAR; R = 1;;\n"
+		"ACCU > X; R = 1;;\n"
+		"R = 1;;\n"
+		"SDR > Y; ALU = XOR; #ret;;\n\n"
+		
+		"eql: IR > SAR; R = 1;;\n"
+		"ACCU > X; R = 1;;\n"
+		"R = 1;;\n"
+		"SDR > Y; ALU = EQL; #ret;;\n\n"
+		
+		"jmp: IR > IAR; #start;;\n\n"
+		
+		//jmn not working yet
 
+		"not: IR > SAR; R = 1;;\n"
+		"ACCU > X; R = 1;;\n"
+		"R = 1;;\n"
+		"SDR > Y; ALU = NOT; #ret;;\n\n"
+		
+		"rar: IR > SAR; R = 1;;\n"
+		"ACCU > X; R = 1;;\n"
+		"R = 1;;\n"
+		"SDR > Y; ALU = RAR; #ret;;\n\n";
+
+
+	//create instruction decoder from given code
+	MiMa::MicroProgram instructionDecoder = MiMa::MicroProgramCompiler::compile(instructionDecoderCode);
+	
+	//write mima program into its memory
 	memory[0x00] = { 0x0000FF };
 	memory[0x01] = { 0x300020 };
 	memory[0x02] = { 0xF00000 };
 	memory[0x20] = { 0x000003 };
 
+	//run the mima
 	MiMa::MinimalMachine mima(instructionDecoder, memory.get());
 	mima.printState();
 

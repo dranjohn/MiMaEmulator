@@ -39,6 +39,7 @@ namespace MiMa {
 
 	constexpr char char_RANGE_LOWER_LIMIT = '+';
 	constexpr char char_RANGE_UPPER_LIMIT = '-';
+	constexpr char char_RANGE_POINT = '=';
 
 	constexpr char char_BREAK = ';';
 	constexpr char char_COMPILER_DIRECTIVE = '!';
@@ -47,7 +48,7 @@ namespace MiMa {
 	uint32_t getALUCode(const std::string& input) {
 		if (input == "ADD")
 			return 1;
-		if (input == "RROT")
+		if (input == "RAR")
 			return 2;
 		if (input == "AND")
 			return 3;
@@ -347,6 +348,7 @@ namespace MiMa {
 	bool MicroProgramCompiler::ConditionalCompileMode::isControl(const char& control) {
 		return control == char_RANGE_LOWER_LIMIT
 			|| control == char_RANGE_UPPER_LIMIT
+			|| control == char_RANGE_POINT
 			|| control == char_BREAK;
 	}
 
@@ -356,6 +358,10 @@ namespace MiMa {
 			lowerLimit = std::stoi(token);
 			break;
 		case char_RANGE_UPPER_LIMIT:
+			upperLimit = std::stoi(token);
+			break;
+		case char_RANGE_POINT:
+			lowerLimit = std::stoi(token);
 			upperLimit = std::stoi(token);
 			break;
 		case char_BREAK:
