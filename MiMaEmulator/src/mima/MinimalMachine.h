@@ -10,9 +10,6 @@
 #include "debug/Log.h"
 
 namespace MiMa {
-	typedef MicroProgramCode(*InstructionDecodeFunction)(const uint8_t&, const uint8_t&); //arguments: decoding value, opCode
-
-
 	struct MemoryCell {
 		uint32_t data : 24;
 		uint32_t debug : 8;
@@ -65,7 +62,6 @@ namespace MiMa {
 
 		//Exchangable MiMa components:
 		MicroProgram instructionDecoder;
-		InstructionDecodeFunction decodingFunction;
 		MemoryCell* memory;
 
 		//MiMa state:
@@ -73,7 +69,7 @@ namespace MiMa {
 		uint8_t instructionDecoderState;
 		MemoryState memoryState;
 	public:
-		MinimalMachine(MicroProgram instructionDecoder, InstructionDecodeFunction decodingFunction, MemoryCell memory[MEMORY_CAPACITY]);
+		MinimalMachine(MicroProgram instructionDecoder, MemoryCell memory[MEMORY_CAPACITY]);
 		~MinimalMachine() { MIMA_LOG_INFO("Destructed MiMa"); }
 
 		//emulate minimal machine

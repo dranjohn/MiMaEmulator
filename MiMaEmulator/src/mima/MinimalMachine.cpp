@@ -11,7 +11,7 @@
 
 
 namespace MiMa {
-	MinimalMachine::MinimalMachine(MicroProgram instructionDecoder, InstructionDecodeFunction decodingFunction, MemoryCell memory[MEMORY_CAPACITY]) :
+	MinimalMachine::MinimalMachine(MicroProgram instructionDecoder, MemoryCell memory[MEMORY_CAPACITY]) :
 		//registers
 		accumulator({ 0 }),
 		instructionAddressRegister(0),
@@ -23,7 +23,6 @@ namespace MiMa {
 		storageDataRegister(0),
 		//components
 		instructionDecoder(instructionDecoder),
-		decodingFunction(decodingFunction),
 		memory(memory),
 		//state
 		running(true),
@@ -40,17 +39,8 @@ namespace MiMa {
 		//get microcode for current register transfer
 		uint8_t opCode = instructionRegister.opCode.value;
 		MicroProgramCode microCode = instructionDecoder.getMicroCode(instructionDecoderState, opCode);
-		uint8_t decoding = microCode.getDecodingBits();
 
 		MIMA_LOG_TRACE("Found microprogram instruction {}", microCode);
-
-		if (decoding > 0) {
-			MIMA_LOG_TRACE("Found decoding state 0x{:02X}", decoding);
-
-			microCode = decodingFunction(decoding, opCode);
-			MIMA_LOG_TRACE("New microcode is {}", microCode);
-		}
-
 		MIMA_LOG_TRACE("Found operation code 0x{:02X}", opCode);
 
 		//put data on the data bus

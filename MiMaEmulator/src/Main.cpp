@@ -8,44 +8,6 @@
 #include "debug/Log.h"
 
 
-MiMa::MicroProgramCode decodeInstructionJump(const uint8_t&, const uint8_t& opCode) {
-	uint8_t shortOpCode = (opCode & 0xF0) >> 4;
-	
-	uint32_t nextAddress = 0;
-	if (shortOpCode == 0xF) { //use extended opCode
-		uint8_t opCodeExtension = opCode & 0xF;
-
-		switch (opCodeExtension) {
-		case 0:
-			nextAddress = 0xFF;
-			break;
-		}
-	}
-	else { //use shortOpCode
-		switch(shortOpCode) {
-		case 0:
-			nextAddress = 0x07;
-			break;
-		case 1:
-			nextAddress = 0x08;
-			break;
-		case 2:
-			nextAddress = 0x0C;
-			break;
-		case 3:
-			nextAddress = 0x10;
-			break;
-		case 4:
-			nextAddress = 0x14;
-			break;
-		}
-	}
-
-	MiMa::MicroProgramCode code;
-	code.setJump(nextAddress);
-	return code;
-}
-
 int main() {
 	std::unique_ptr<MiMa::MemoryCell[]> memory = std::make_unique<MiMa::MemoryCell[]>(MiMa::MinimalMachine::MEMORY_CAPACITY);
 
@@ -94,7 +56,7 @@ int main() {
 	memory[0x02] = { 0xF00000 };
 	memory[0x20] = { 0x000003 };
 
-	MiMa::MinimalMachine mima(instructionDecoder, decodeInstructionJump, memory.get());
+	MiMa::MinimalMachine mima(instructionDecoder, memory.get());
 	mima.printState();
 
 	mima.emulateLifeTime();

@@ -136,11 +136,6 @@ namespace MiMa {
 			return NO_MICROPROGRAM_CODE_MODIFICATION;
 		}
 
-		if (leftOperand == "D") {
-			uint8_t decoding = (uint8_t)std::stoi(rightOperand);
-			return [decoding](MicroProgramCode& code) { code.setDecode(decoding); };
-		}
-
 		if (leftOperand == "ALU") {
 			uint8_t ALUCode = getALUCode(rightOperand);
 			return [ALUCode](MicroProgramCode& code) { code.setALUCode(ALUCode); };

@@ -40,18 +40,14 @@ namespace MiMa {
 		inline bool isRightALUOperandReading() const { return bits & ALU_RIGHT_OPERAND; }
 		inline bool isAccumulatorRegisterReading() const { return bits & ACCUMULATOR_READING; }
 		inline bool isAccumulatorRegisterWriting() const { return bits & ACCUMULATOR_WRITING; }
-		inline uint8_t getDecodingBits() const { return (uint8_t)((bits & DECODING) >> 28); }
 
 		inline void setJump(const uint8_t& jumpDestination) { bits &= ~JUMP_MASK; bits |= jumpDestination; }
-		//inline void addBits(const uint32_t& addedBits) { bits |= addedBits; }
+		inline void setALUCode(const uint8_t& code) { bits &= ~ALU_C; bits |= ((code & 0x7) << 12); }
 
 		inline void enableMemoryWrite() { bits |= STORAGE_WRITING; }
 		inline void disableMemoryWrite() { bits &= ~STORAGE_WRITING; }
 		inline void enableMemoryRead() { bits |= STORAGE_READING; }
 		inline void disableMemoryRead() { bits &= ~STORAGE_READING; }
-
-		inline void setDecode(const uint8_t& code) { bits &= ~DECODING; bits |= ((code & 0xF) << 28); }
-		inline void setALUCode(const uint8_t& code) { bits &= ~ALU_C; bits |= ((code & 0x7) << 12); }
 
 		inline void setStorageAddressRegisterReading() { bits |= SAR_READING; }
 		inline void setStorageDataRegisterReading() { bits |= SDR_READING; }
