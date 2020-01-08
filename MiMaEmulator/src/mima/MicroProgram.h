@@ -69,138 +69,50 @@ namespace MiMa {
 	typedef void(MicroProgramCode::* MicroProgramCodeSet8BitFunction)(const uint8_t&);
 	
 
-	template<size_t opCodeMax>
-	class MicroProgramCodeNode;
+	class MicroProgramCodeNode {
+		friend class MicroProgramCodeList;
+		friend struct fmt::formatter<MiMa::MicroProgramCodeList>;
 
-	template<size_t opCodeMax>
-	class MicroProgramCodeList;
-
-	template<size_t opCodeMax>
-	struct fmt::formatter<MiMa::MicroProgramCodeList<opCodeMax>>;
-
-	template<size_t opCodeMax>
-	class MicroProgramCodeList {
-		friend fmt::formatter<MiMa::MicroProgramCodeList<opCodeMax>>;
 	private:
-		MicroProgramCodeNode<opCodeMax>* head = new MicroProgramCodeNode<opCodeMax>();
+		MicroProgramCodeNode* next;
+
+		size_t upperConditionLimit;
+		MicroProgramCode code;
+
+		MicroProgramCodeNode(const size_t& upperConditionLimit, MicroProgramCodeNode* next = nullptr, MicroProgramCode code = MicroProgramCode());
+	};
+
+	class MicroProgramCodeList {
+		friend struct fmt::formatter<MiMa::MicroProgramCodeList>;
+	private:
+		MicroProgramCodeNode* head;
+		const size_t conditionMax;
 
 	public:
-		~MicroProgramCodeList() {
-			MicroProgramCodeNode<opCodeMax>* current = head;
-			MicroProgramCodeNode<opCodeMax>* next;
+		MicroProgramCodeList(const size_t& conditionMax = 0xFF);
+		~MicroProgramCodeList();
 
-			while (current != nullptr) {
-				next = current->next;
-				delete current;
+		void apply(const std::function<void(MicroProgramCode&)>& func, const size_t& lowerLimit, size_t upperLimit);
 
-				current = next;
-			}
-		}
-
-
-		void apply(const std::function<void(MicroProgramCode&)>& func, const size_t& lowerLimit = 0, size_t upperLimit = opCodeMax) {
-			upperLimit = std::min(upperLimit, opCodeMax);
-			if (lowerLimit > upperLimit) {
-				return;
-			}
-
-			MicroProgramCodeNode<opCodeMax>* prev = nullptr;
-			MicroProgramCodeNode<opCodeMax>* current = head;
-
-			//find the first node which is affected by the application of the microprogram code function,
-			//i.e. the first node which has an upper limit equal or above the lower limit of the effect
-			//=> the previous node has an upper limit equal or below the lower limit
-			while (current->opCodeUpperLimit < lowerLimit) {
-				prev = current;
-				current = current->next;
-			}
-
-			//in case the previous node has an upper limit below the lower limit
-			if (prev == nullptr) {
-				if (lowerLimit != 0) {
-					size_t limitingNodeLimit = lowerLimit - 1;
-
-					head = new MicroProgramCodeNode<opCodeMax>(head, head->code, limitingNodeLimit);
-					prev = head;
-				}
-			}
-			else {
-				if (prev->opCodeUpperLimit + 1 != lowerLimit) {
-					size_t limitingNodeLimit = lowerLimit - 1;
-
-					prev->next = new MicroProgramCodeNode<opCodeMax>(current, current->code, limitingNodeLimit);
-					prev = prev->next;
-				}
-			}
-
-			//apply function to all nodes with an upper limit under the given upper limit
-			while (current->opCodeUpperLimit < upperLimit) {
-				func(current->code);
-
-				prev = current;
-				current = current->next;
-			}
-
-			//if there is a node matching the given upper limit, apply the function to it as well and return
-			if (current->opCodeUpperLimit == upperLimit) {
-				func(current->code);
-				return;
-			}
-
-			//if there is no node matching the given upper limit, create one and apply the function to it as well
-			MicroProgramCodeNode<opCodeMax>* upperLimitNode = new MicroProgramCodeNode<opCodeMax>(current, current->code, upperLimit);
-
-			if (prev == nullptr) {
-				head = upperLimitNode;
-			}
-			else {
-				prev->next = upperLimitNode;
-			}
-			func(upperLimitNode->code);
-		}
-
-		inline void apply(const MicroProgramCodeSetFunction& func, const size_t& lowerLimit = 0, size_t upperLimit = opCodeMax) {
+		inline void apply(const MicroProgramCodeSetFunction& func, const size_t& lowerLimit, size_t upperLimit) {
 			apply([func](MicroProgramCode& microProgramCode) { std::invoke(func, microProgramCode); }, lowerLimit, upperLimit);
 		}
 
-		inline void apply(const MicroProgramCodeSet8BitFunction& func, const uint8_t& value, const size_t& lowerLimit = 0, const size_t& upperLimit = opCodeMax) {
+		inline void apply(const MicroProgramCodeSet8BitFunction& func, const uint8_t& value, const size_t& lowerLimit, const size_t& upperLimit) {
 			apply([func, value](MicroProgramCode& microProgramCode) { std::invoke(std::bind(func, std::placeholders::_1, value), microProgramCode); }, lowerLimit, upperLimit);
 		}
 
 
-		MicroProgramCode get(size_t opCode) {
-			opCode = std::min(opCode, opCodeMax);
-			MicroProgramCodeNode<opCodeMax>* current = head;
-
-			while (current->opCodeUpperLimit < opCode) {
-				current = current->next;
-			}
-
-			return current->code;
-		}
-	};
-
-	template<size_t opCodeMax>
-	class MicroProgramCodeNode {
-		friend class MicroProgramCodeList<opCodeMax>;
-		friend fmt::formatter<MiMa::MicroProgramCodeList<opCodeMax>>;
-
-	private:
-		MicroProgramCodeNode<opCodeMax>* next;
-
-		size_t opCodeUpperLimit;
-		MicroProgramCode code;
-
-		MicroProgramCodeNode(MicroProgramCodeNode<opCodeMax>* next = nullptr, MicroProgramCode code = MicroProgramCode(), size_t opCodeUpperLimit = opCodeMax) : next(next), code(code), opCodeUpperLimit(opCodeUpperLimit) {}
+		MicroProgramCode get(size_t condition);
 	};
 
 
 	class MicroProgram {
 	private:
 		//minimal machine microprogram read-only memory
+		std::shared_ptr<MicroProgramCodeList[]> memory;
 	public:
-		std::shared_ptr<MicroProgramCodeList<0xFF>[]> memory;
-		MicroProgram(const std::shared_ptr<MicroProgramCodeList<0xFF>[]>& memory) : memory(memory) {}
+		MicroProgram(const std::shared_ptr<MicroProgramCodeList[]>& memory) : memory(memory) {}
 
 		inline const MicroProgramCode getMicroCode(const uint8_t& memoryAddress, const uint8_t& opCode) const { return memory[memoryAddress].get(opCode); }
 	};
@@ -215,13 +127,13 @@ struct fmt::formatter<MiMa::MicroProgramCode> {
 	auto format(const MiMa::MicroProgramCode& code, FormatContext& ctx) { return fmt::format_to(ctx.out(), "0x{:07X}", code.bits); }
 };
 
-template<size_t opCodeMax>
-struct fmt::formatter<MiMa::MicroProgramCodeList<opCodeMax>> {
+template<>
+struct fmt::formatter<MiMa::MicroProgramCodeList> {
 	constexpr auto parse(format_parse_context& ctx) { return ctx.end(); }
 
 	template<typename FormatContext>
-	auto format(const MiMa::MicroProgramCodeList<opCodeMax>& codeList, FormatContext& ctx) {
-		if (codeList.head->opCodeUpperLimit == opCodeMax) {
+	auto format(const MiMa::MicroProgramCodeList& codeList, FormatContext& ctx) {
+		if (codeList.head->upperConditionLimit == codeList.conditionMax) {
 			return fmt::format_to(ctx.out(), "{}", codeList.head->code);
 		}
 
@@ -229,9 +141,9 @@ struct fmt::formatter<MiMa::MicroProgramCodeList<opCodeMax>> {
 		std::string listOutput = "OpCode conditional:\n{}";
 		std::string nodeFormat = "up to 0x{:02X}: {}\n{{}}";
 
-		MiMa::MicroProgramCodeNode<opCodeMax>* current = codeList.head;
+		MiMa::MicroProgramCodeNode* current = codeList.head;
 		while (current != nullptr) {
-			std::string node = fmt::format(nodeFormat, current->opCodeUpperLimit, current->code);
+			std::string node = fmt::format(nodeFormat, current->upperConditionLimit, current->code);
 			listOutput = fmt::format(listOutput, node);
 
 			current = current->next;

@@ -18,6 +18,7 @@ int main() {
 		"Z > IAR;;\n"
 		"SDR > IR;;\n\n"
 
+		//"cm(conditional, op_code, 255)!\n"
 		"cm(conditional)!\n"
 		"#halt;\n"
 		"0+ 15- #ldc;\n"
@@ -77,6 +78,11 @@ int main() {
 		"jmp: IR > IAR; #start;;\n\n"
 		
 		//jmn not working yet
+		//"cm(conditional, accu_negative, 1)!\n"
+		//"jmn:\n"
+		//"0= #start;\n"
+		//"1= #jmp;\n"
+		//";\n\n"
 
 		"not: IR > SAR; R = 1;;\n"
 		"ACCU > X; R = 1;;\n"

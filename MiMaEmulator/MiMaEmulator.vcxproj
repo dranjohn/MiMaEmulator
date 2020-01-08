@@ -109,6 +109,7 @@
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\debug\Log.cpp" />
     <ClCompile Include="src\debug\LogFormat.cpp" />
+    <ClCompile Include="src\mima\MicroProgram.cpp" />
     <ClCompile Include="src\mima\MicroProgramCompiler.cpp" />
     <ClCompile Include="src\mima\MinimalMachine.cpp" />
   </ItemGroup>

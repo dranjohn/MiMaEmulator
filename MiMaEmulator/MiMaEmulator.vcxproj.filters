@@ -60,5 +60,6 @@
     <ClCompile Include="src\mima\MinimalMachine.cpp">
       <Filter>mima</Filter>
     </ClCompile>
+    <ClCompile Include="src\mima\MicroProgram.cpp" />
   </ItemGroup>
 </Project>
