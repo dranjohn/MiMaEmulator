@@ -38,7 +38,7 @@ namespace MiMa {
 
 		//get microcode for current register transfer
 		uint8_t opCode = instructionRegister.opCode.value;
-		MicroProgramCode microCode = instructionDecoder.getMicroCode(instructionDecoderState, opCode);
+		UnconditionalMicroProgramCode microCode = instructionDecoder.getMicroCode(instructionDecoderState, opCode);
 
 		MIMA_LOG_TRACE("Found microprogram instruction {}", microCode);
 		MIMA_LOG_TRACE("Found operation code 0x{:02X}", opCode);

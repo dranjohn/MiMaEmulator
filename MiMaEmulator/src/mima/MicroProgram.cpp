@@ -1,7 +1,7 @@
 #include "MicroProgram.h"
 
 namespace MiMa {
-	MicroProgramCodeNode::MicroProgramCodeNode(const size_t& upperConditionLimit, MicroProgramCodeNode* next, MicroProgramCode code) :
+	MicroProgramCodeNode::MicroProgramCodeNode(const size_t& upperConditionLimit, MicroProgramCodeNode* next, UnconditionalMicroProgramCode code) :
 		next(next),
 		code(code),
 		upperConditionLimit(upperConditionLimit)
@@ -9,7 +9,8 @@ namespace MiMa {
 
 
 
-	MicroProgramCodeList::MicroProgramCodeList(const size_t& conditionMax) :
+	MicroProgramCodeList::MicroProgramCodeList(const std::string& conditionName, const size_t& conditionMax) :
+		conditionName(conditionName),
 		conditionMax(conditionMax),
 		head(new MicroProgramCodeNode(conditionMax))
 	{}
@@ -27,7 +28,7 @@ namespace MiMa {
 	}
 
 
-	void MicroProgramCodeList::apply(const std::function<void(MicroProgramCode&)>& func, const size_t& lowerLimit, size_t upperLimit) {
+	void MicroProgramCodeList::apply(const std::function<void(UnconditionalMicroProgramCode&)>& func, const size_t& lowerLimit, size_t upperLimit) {
 		upperLimit = std::min(upperLimit, conditionMax);
 		if (lowerLimit > upperLimit) {
 			return;
@@ -88,7 +89,7 @@ namespace MiMa {
 		func(upperLimitNode->code);
 	}
 
-	MicroProgramCode MicroProgramCodeList::get(size_t condition) {
+	UnconditionalMicroProgramCode MicroProgramCodeList::get(size_t condition) {
 		condition = std::min(condition, conditionMax);
 		MicroProgramCodeNode* current = head;
 

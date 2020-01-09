@@ -17,7 +17,7 @@
 
 namespace MiMa {
 	//Utility: binary operators understandable by the micro program compiler
-	typedef std::function<void(MicroProgramCode&)> MicroProgramCodeModifier;
+	typedef std::function<void(UnconditionalMicroProgramCode&)> MicroProgramCodeModifier;
 	typedef MicroProgramCodeModifier(*BinaryOperator)(const std::string&, const std::string&);
 
 	class MicroProgramCompiler {

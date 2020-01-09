@@ -70,17 +70,17 @@ namespace MiMa {
 	//Utility: convert register write identifiers to corresponding control bits
 	MicroProgramCodeSetFunction getWriteBit(const std::string& identifier) {
 		if (identifier == "SDR")
-			return &MicroProgramCode::setStorageDataRegisterWriting;
+			return &UnconditionalMicroProgramCode::setStorageDataRegisterWriting;
 		if (identifier == "IR")
-			return &MicroProgramCode::setInstructionRegisterWriting;
+			return &UnconditionalMicroProgramCode::setInstructionRegisterWriting;
 		if (identifier == "IAR")
-			return &MicroProgramCode::setInstructionAddressRegisterWriting;
+			return &UnconditionalMicroProgramCode::setInstructionAddressRegisterWriting;
 		if (identifier == "ONE")
-			return &MicroProgramCode::setConstantOneWriting;
+			return &UnconditionalMicroProgramCode::setConstantOneWriting;
 		if (identifier == "Z")
-			return &MicroProgramCode::setALUResultWriting;
+			return &UnconditionalMicroProgramCode::setALUResultWriting;
 		if (identifier == "ACCU")
-			return &MicroProgramCode::setAccumulatorRegisterWriting;
+			return &UnconditionalMicroProgramCode::setAccumulatorRegisterWriting;
 
 		return &MicroProgramCode::pass;
 	}
@@ -88,31 +88,31 @@ namespace MiMa {
 	//Utility: convert register read identifiers to corresponding control bits
 	MicroProgramCodeSetFunction getReadBit(const std::string& identifier) {
 		if (identifier == "SAR")
-			return &MicroProgramCode::setStorageAddressRegisterReading;
+			return &UnconditionalMicroProgramCode::setStorageAddressRegisterReading;
 		if (identifier == "SDR")
-			return &MicroProgramCode::setStorageDataRegisterReading;
+			return &UnconditionalMicroProgramCode::setStorageDataRegisterReading;
 		if (identifier == "IR")
-			return &MicroProgramCode::setInstructionRegisterReading;
+			return &UnconditionalMicroProgramCode::setInstructionRegisterReading;
 		if (identifier == "IAR")
-			return &MicroProgramCode::setInstructionAddressRegisterReading;
+			return &UnconditionalMicroProgramCode::setInstructionAddressRegisterReading;
 		if (identifier == "X")
-			return &MicroProgramCode::setLeftALUOperandReading;
+			return &UnconditionalMicroProgramCode::setLeftALUOperandReading;
 		if (identifier == "Y")
-			return &MicroProgramCode::setRightALUOperandReading;
+			return &UnconditionalMicroProgramCode::setRightALUOperandReading;
 		if (identifier == "ACCU")
-			return &MicroProgramCode::setAccumulatorRegisterReading;
+			return &UnconditionalMicroProgramCode::setAccumulatorRegisterReading;
 
 		return &MicroProgramCode::pass;
 	}
 
 	//Utility: predefined binary operators in compilation
-	static const std::function<void(MicroProgramCode&)> NO_MICROPROGRAM_CODE_MODIFICATION = [](MicroProgramCode&) {};
+	static const std::function<void(UnconditionalMicroProgramCode&)> NO_MICROPROGRAM_CODE_MODIFICATION = [](UnconditionalMicroProgramCode&) {};
 
 	BinaryOperator MOVE_OPERATOR = [](const std::string& leftOperand, const std::string& rightOperand)->MicroProgramCodeModifier {
 		MicroProgramCodeSetFunction setWrite = getWriteBit(leftOperand);
 		MicroProgramCodeSetFunction setRead = getReadBit(rightOperand);
 
-		MicroProgramCodeModifier registerTransfer = [setWrite, setRead](MicroProgramCode& microProgramCode) {
+		MicroProgramCodeModifier registerTransfer = [setWrite, setRead](UnconditionalMicroProgramCode& microProgramCode) {
 			(microProgramCode.*setWrite)();
 			(microProgramCode.*setRead)();
 		};
@@ -121,27 +121,27 @@ namespace MiMa {
 	BinaryOperator SET_OPERATOR = [](const std::string& leftOperand, const std::string& rightOperand)->MicroProgramCodeModifier {
 		if (leftOperand == "R") {
 			if (rightOperand == "1") {
-				return [](MicroProgramCode& code) { code.enableMemoryRead(); };
+				return [](UnconditionalMicroProgramCode& code) { code.enableMemoryRead(); };
 			}
 			if (rightOperand == "0") {
-				return [](MicroProgramCode& code) { code.disableMemoryRead(); };
+				return [](UnconditionalMicroProgramCode& code) { code.disableMemoryRead(); };
 			}
 			return NO_MICROPROGRAM_CODE_MODIFICATION;
 		}
 
 		if (leftOperand == "W") {
 			if (rightOperand == "1") {
-				return [](MicroProgramCode& code) { code.enableMemoryWrite(); };
+				return [](UnconditionalMicroProgramCode& code) { code.enableMemoryWrite(); };
 			}
 			if (rightOperand == "0") {
-				return [](MicroProgramCode& code) { code.disableMemoryWrite(); };
+				return [](UnconditionalMicroProgramCode& code) { code.disableMemoryWrite(); };
 			}
 			return NO_MICROPROGRAM_CODE_MODIFICATION;
 		}
 
 		if (leftOperand == "ALU") {
 			uint8_t ALUCode = getALUCode(rightOperand);
-			return [ALUCode](MicroProgramCode& code) { code.setALUCode(ALUCode); };
+			return [ALUCode](UnconditionalMicroProgramCode& code) { code.setALUCode(ALUCode); };
 		}
 
 		return NO_MICROPROGRAM_CODE_MODIFICATION;
@@ -189,7 +189,7 @@ namespace MiMa {
 
 		if (labelLocation != compiler.labels.end()) { //label found
 			MIMA_LOG_TRACE("Found microprogram jump instruction from 0x{:02X} to 0x{:02X}", compiler.firstFree, labelLocation->second);
-			currentCode.apply(&MicroProgramCode::setJump, labelLocation->second, 0, 0xFF);
+			currentCode.apply(&UnconditionalMicroProgramCode::setJump, labelLocation->second, 0, 0xFF);
 		}
 		else { //label not found, add this to unresolved references
 			MIMA_LOG_TRACE("Found unresolved microprogram jump from 0x{:02X}", compiler.firstFree);
@@ -197,7 +197,7 @@ namespace MiMa {
 			uint8_t firstFreeCopy = compiler.firstFree;
 			std::shared_ptr<MicroProgramCodeList[]>& memoryReference = compiler.memory;
 			std::function<bool(const uint8_t&)> labelAddListener = [firstFreeCopy, memoryReference](const uint8_t& labelAddress) {
-				memoryReference[firstFreeCopy].apply(&MicroProgramCode::setJump, labelAddress, 0, 0xFF);
+				memoryReference[firstFreeCopy].apply(&UnconditionalMicroProgramCode::setJump, labelAddress, 0, 0xFF);
 				
 				return true;
 			};
@@ -215,7 +215,7 @@ namespace MiMa {
 
 		if (labelLocation != compiler.labels.end()) { //label found
 			MIMA_LOG_TRACE("Found microprogram jump instruction from 0x{:02X} to 0x{:02X} in range from 0x{:08X} to 0x{:08X}", compiler.firstFree, labelLocation->second, lowerLimit, upperLimit);
-			currentCode.apply(&MicroProgramCode::setJump, labelLocation->second, lowerLimit, upperLimit);
+			currentCode.apply(&UnconditionalMicroProgramCode::setJump, labelLocation->second, lowerLimit, upperLimit);
 		}
 		else { //label not found, add this to unresolved references
 			MIMA_LOG_TRACE("Found unresolved microprogram jump from 0x{:02X} for range from 0x{:08X} to 0x{:08X}", compiler.firstFree, lowerLimit, upperLimit);
@@ -223,7 +223,7 @@ namespace MiMa {
 			uint8_t firstFreeCopy = compiler.firstFree;
 			std::shared_ptr<MicroProgramCodeList[]>& memoryReference = compiler.memory;
 			std::function<bool(const uint8_t&)> labelAddListener = [firstFreeCopy, memoryReference, lowerLimit, upperLimit](const uint8_t& labelAddress) {
-				memoryReference[firstFreeCopy].apply(&MicroProgramCode::setJump, labelAddress, lowerLimit, upperLimit);
+				memoryReference[firstFreeCopy].apply(&UnconditionalMicroProgramCode::setJump, labelAddress, lowerLimit, upperLimit);
 				MIMA_LOG_TRACE("Resolved label at 0x{:02X} to 0x{:02X} for range from 0x{:02X} to 0x{:02X}, current value: {}", firstFreeCopy, labelAddress, lowerLimit, upperLimit, memoryReference[firstFreeCopy]);
 
 				return true;
@@ -246,7 +246,7 @@ namespace MiMa {
 	void MicroProgramCompiler::CompileMode::endOfLine(bool& fixedJump, MicroProgramCodeList& currentCode) {
 		if (!fixedJump) {
 			MIMA_LOG_TRACE("Setting automatic jump to next address 0x{:02X} for microprogram instruction {}", compiler.firstFree + 1, currentCode);
-			currentCode.apply(&MicroProgramCode::setJump, compiler.firstFree + 1, 0, 0xFF);
+			currentCode.apply(&UnconditionalMicroProgramCode::setJump, compiler.firstFree + 1, 0, 0xFF);
 		}
 
 		MIMA_LOG_TRACE("Compiled at 0x{:02X}: microcode {}", compiler.firstFree, currentCode);
@@ -383,7 +383,7 @@ namespace MiMa {
 			}
 
 			if (std::string(token) == "next") {
-				compiler.memory[compiler.firstFree].apply(&MicroProgramCode::setJump, compiler.firstFree + 1, lowerLimit, upperLimit);
+				compiler.memory[compiler.firstFree].apply(&UnconditionalMicroProgramCode::setJump, compiler.firstFree + 1, lowerLimit, upperLimit);
 				MIMA_LOG_INFO("Added jump to instruction {:02X} in range from {} to {}", compiler.firstFree + 1, lowerLimit, upperLimit);
 
 				lowerLimit = 0;
@@ -418,7 +418,7 @@ namespace MiMa {
 
 		//0xFF is reserved for halt
 		labels.insert({ "halt", HALT_RESERVED });
-		memory[HALT_RESERVED].apply(&MicroProgramCode::setJump, HALT_RESERVED, 0, HALT_RESERVED);
+		memory[HALT_RESERVED].apply(&UnconditionalMicroProgramCode::setJump, HALT_RESERVED, 0, HALT_RESERVED);
 
 		MIMA_LOG_INFO("Initialized microcode compiler");
 	};
