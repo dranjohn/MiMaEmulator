@@ -108,67 +108,19 @@ namespace MiMa {
 		friend struct fmt::formatter<MiMa::BinaryConditionalMicroProgramCode>;
 
 	private:
-		static const uint32_t JUMP_MASK = 0xFF;
-
 		const std::string conditionName;
 
 		UnconditionalMicroProgramCode trueCode;
 		UnconditionalMicroProgramCode falseCode;
 
 	public:
-		BinaryConditionalMicroProgramCode(const std::string& conditionName);
+		BinaryConditionalMicroProgramCode(const std::string& conditionName) : conditionName(conditionName) {}
 
 		inline UnconditionalMicroProgramCode& get(const size_t& condition) override { return (condition) ? trueCode : falseCode; }
 		inline UnconditionalMicroProgramCode& get(const StatusBitList& statusBits) override {
 			StatusBitList::const_iterator condition = statusBits.find(conditionName);
 			return (condition != statusBits.end() && condition->second) ? trueCode : falseCode;
 		}
-
-		/*
-		//provide get functions by using internal uint32_t representation of the microprogram code
-		inline uint8_t getNextInstructionDecoderState() const override { return (uint8_t)(bitsCopy() & StatusBit::FOLLOWING_ADDRESS); }
-		inline bool isWritingToMemory() const override { return bitsCopy() & StatusBit::STORAGE_WRITING; }
-		inline bool isReadingFromMemory() const override { return bitsCopy() & StatusBit::STORAGE_READING; }
-		inline uint8_t getALUCode() const override { return (uint8_t)((bitsCopy() & StatusBit::ALU_C) >> 12); }
-		inline bool isStorageAddressRegisterReading() const override { return bitsCopy() & StatusBit::SAR_READING; }
-		inline bool isStorageDataRegisterReading() const override { return bitsCopy() & StatusBit::SDR_READING; }
-		inline bool isStorageDataRegisterWriting() const override { return bitsCopy() & StatusBit::SDR_WRITING; }
-		inline bool isInstructionRegisterReading() const override { return bitsCopy() & StatusBit::IR_READING; }
-		inline bool isInstructionRegisterWriting() const override { return bitsCopy() & StatusBit::IR_WRITING; }
-		inline bool isInstructionAddressRegisterReading() const override { return bitsCopy() & StatusBit::IAR_READING; }
-		inline bool isInstructionAddressRegisterWriting() const override { return bitsCopy() & StatusBit::IAR_WRITING; }
-		inline bool isConstantOneWriting() const override { return bitsCopy() & StatusBit::ONE; }
-		inline bool isALUResultWriting() const override { return bitsCopy() & StatusBit::ALU_RESULT; }
-		inline bool isLeftALUOperandReading() const override { return bitsCopy() & StatusBit::ALU_LEFT_OPERAND; }
-		inline bool isRightALUOperandReading() const override { return bitsCopy() & StatusBit::ALU_RIGHT_OPERAND; }
-		inline bool isAccumulatorRegisterReading() const override { return bitsCopy() & StatusBit::ACCUMULATOR_READING; }
-		inline bool isAccumulatorRegisterWriting() const override { return bitsCopy() & StatusBit::ACCUMULATOR_WRITING; }
-
-		//uint8_t setters
-		inline void setJump(const uint8_t& jumpDestination, bool ifCondition) { bitsRef(ifCondition) &= ~JUMP_MASK; bitsRef(ifCondition) |= jumpDestination; }
-		inline void setALUCode(const uint8_t& code, bool ifCondition) { bitsRef(ifCondition) &= ~StatusBit::ALU_C; bitsRef(ifCondition) |= ((code & 0x7) << 12); }
-
-		//set/unset storage acces bit
-		inline void enableMemoryWrite(bool ifCondition) { bitsRef(ifCondition) |= StatusBit::STORAGE_WRITING; }
-		inline void disableMemoryWrite(bool ifCondition) { bitsRef(ifCondition) &= ~StatusBit::STORAGE_WRITING; }
-		inline void enableMemoryRead(bool ifCondition) { bitsRef(ifCondition) |= StatusBit::STORAGE_READING; }
-		inline void disableMemoryRead(bool ifCondition) { bitsRef(ifCondition) &= ~StatusBit::STORAGE_READING; }
-
-		//set registers read/write bit
-		inline void setStorageAddressRegisterReading(bool ifCondition) { bitsRef(ifCondition) |= StatusBit::SAR_READING; }
-		inline void setStorageDataRegisterReading(bool ifCondition) { bitsRef(ifCondition) |= StatusBit::SDR_READING; }
-		inline void setStorageDataRegisterWriting(bool ifCondition) { bitsRef(ifCondition) |= StatusBit::SDR_WRITING; }
-		inline void setInstructionRegisterReading(bool ifCondition) { bitsRef(ifCondition) |= StatusBit::IR_READING; }
-		inline void setInstructionRegisterWriting(bool ifCondition) { bitsRef(ifCondition) |= StatusBit::IR_WRITING; }
-		inline void setInstructionAddressRegisterReading(bool ifCondition) { bitsRef(ifCondition) |= StatusBit::IAR_READING; }
-		inline void setInstructionAddressRegisterWriting(bool ifCondition) { bitsRef(ifCondition) |= StatusBit::IAR_WRITING; }
-		inline void setConstantOneWriting(bool ifCondition) { bitsRef(ifCondition) |= StatusBit::ONE; }
-		inline void setALUResultWriting(bool ifCondition) { bitsRef(ifCondition) |= StatusBit::ALU_RESULT; }
-		inline void setLeftALUOperandReading(bool ifCondition) { bitsRef(ifCondition) |= StatusBit::ALU_LEFT_OPERAND; }
-		inline void setRightALUOperandReading(bool ifCondition) { bitsRef(ifCondition) |= StatusBit::ALU_RIGHT_OPERAND; }
-		inline void setAccumulatorRegisterReading(bool ifCondition) { bitsRef(ifCondition) |= StatusBit::ACCUMULATOR_READING; }
-		inline void setAccumulatorRegisterWriting(bool ifCondition) { bitsRef(ifCondition) |= StatusBit::ACCUMULATOR_WRITING; }
-		*/
 	};
 	
 
