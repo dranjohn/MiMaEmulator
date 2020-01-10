@@ -89,11 +89,11 @@ namespace MiMa {
 		func(upperLimitNode->code);
 	}
 
-	UnconditionalMicroProgramCode MicroProgramCodeList::get(size_t condition) {
-		condition = std::min(condition, conditionMax);
+	UnconditionalMicroProgramCode& MicroProgramCodeList::get(const size_t& condition) {
+		size_t upperLimit = std::min(condition, conditionMax);
 		MicroProgramCodeNode* current = head;
 
-		while (current->upperConditionLimit < condition) {
+		while (current->upperConditionLimit < upperLimit) {
 			current = current->next;
 		}
 

@@ -82,7 +82,7 @@ namespace MiMa {
 		if (identifier == "ACCU")
 			return &UnconditionalMicroProgramCode::setAccumulatorRegisterWriting;
 
-		return &MicroProgramCode::pass;
+		return &UnconditionalMicroProgramCode::pass;
 	}
 
 	//Utility: convert register read identifiers to corresponding control bits
@@ -102,7 +102,7 @@ namespace MiMa {
 		if (identifier == "ACCU")
 			return &UnconditionalMicroProgramCode::setAccumulatorRegisterReading;
 
-		return &MicroProgramCode::pass;
+		return &UnconditionalMicroProgramCode::pass;
 	}
 
 	//Utility: predefined binary operators in compilation

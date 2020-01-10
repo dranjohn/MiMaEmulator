@@ -14,31 +14,18 @@
 
 
 namespace MiMa {
+	typedef std::unordered_map<std::string, size_t> StatusBitList;
+
 	// ----------------------------------------------------------------------------------------
 	// One code line (with or without condition) in a microprogram running on a minimal machine
 	// ----------------------------------------------------------------------------------------
 
-	class MicroProgramCode {
-	public:
-		virtual uint8_t getNextInstructionDecoderState() const = 0;
-		virtual bool isWritingToMemory() const = 0;
-		virtual bool isReadingFromMemory() const = 0;
-		virtual uint8_t getALUCode() const = 0;
-		virtual bool isStorageAddressRegisterReading() const = 0;
-		virtual bool isStorageDataRegisterReading() const = 0;
-		virtual bool isStorageDataRegisterWriting() const = 0;
-		virtual bool isInstructionRegisterReading() const = 0;
-		virtual bool isInstructionRegisterWriting() const = 0;
-		virtual bool isInstructionAddressRegisterReading() const = 0;
-		virtual bool isInstructionAddressRegisterWriting() const = 0;
-		virtual bool isConstantOneWriting() const = 0;
-		virtual bool isALUResultWriting() const = 0;
-		virtual bool isLeftALUOperandReading() const = 0;
-		virtual bool isRightALUOperandReading() const = 0;
-		virtual bool isAccumulatorRegisterReading() const = 0;
-		virtual bool isAccumulatorRegisterWriting() const = 0;
+	class UnconditionalMicroProgramCode;
 
-		inline void pass() {} //does nothing
+	class ConditionalMicroProgramCode {
+	public:
+		virtual UnconditionalMicroProgramCode& get(const size_t& condition) = 0;
+		virtual UnconditionalMicroProgramCode& get(const StatusBitList& statusBits) = 0;
 	};
 
 
@@ -47,7 +34,7 @@ namespace MiMa {
 	// An unconditional line of microprogram code
 	// ------------------------------------------
 
-	class UnconditionalMicroProgramCode : public MicroProgramCode {
+	class UnconditionalMicroProgramCode : public ConditionalMicroProgramCode {
 		friend struct fmt::formatter <MiMa::UnconditionalMicroProgramCode>;
 
 	private:
@@ -57,23 +44,23 @@ namespace MiMa {
 
 	public:
 		//override get functions by using internal uint32_t representation of the microprogram code
-		inline uint8_t getNextInstructionDecoderState() const override { return (uint8_t)(bits & StatusBit:: FOLLOWING_ADDRESS); }
-		inline bool isWritingToMemory() const override { return bits & StatusBit:: STORAGE_WRITING; }
-		inline bool isReadingFromMemory() const override { return bits & StatusBit:: STORAGE_READING; }
-		inline uint8_t getALUCode() const override { return (uint8_t)((bits & StatusBit:: ALU_C) >> 12); }
-		inline bool isStorageAddressRegisterReading() const override { return bits & StatusBit:: SAR_READING; }
-		inline bool isStorageDataRegisterReading() const override { return bits & StatusBit:: SDR_READING; }
-		inline bool isStorageDataRegisterWriting() const override { return bits & StatusBit:: SDR_WRITING; }
-		inline bool isInstructionRegisterReading() const override { return bits & StatusBit:: IR_READING; }
-		inline bool isInstructionRegisterWriting() const override { return bits & StatusBit:: IR_WRITING; }
-		inline bool isInstructionAddressRegisterReading() const override { return bits & StatusBit:: IAR_READING; }
-		inline bool isInstructionAddressRegisterWriting() const override { return bits & StatusBit:: IAR_WRITING; }
-		inline bool isConstantOneWriting() const override { return bits & StatusBit:: ONE; }
-		inline bool isALUResultWriting() const override { return bits & StatusBit:: ALU_RESULT; }
-		inline bool isLeftALUOperandReading() const override { return bits & StatusBit:: ALU_LEFT_OPERAND; }
-		inline bool isRightALUOperandReading() const override { return bits & StatusBit:: ALU_RIGHT_OPERAND; }
-		inline bool isAccumulatorRegisterReading() const override { return bits & StatusBit:: ACCUMULATOR_READING; }
-		inline bool isAccumulatorRegisterWriting() const override { return bits & StatusBit:: ACCUMULATOR_WRITING; }
+		inline uint8_t getNextInstructionDecoderState() const { return (uint8_t)(bits & StatusBit:: FOLLOWING_ADDRESS); }
+		inline bool isWritingToMemory() const { return bits & StatusBit:: STORAGE_WRITING; }
+		inline bool isReadingFromMemory() const { return bits & StatusBit:: STORAGE_READING; }
+		inline uint8_t getALUCode() const { return (uint8_t)((bits & StatusBit:: ALU_C) >> 12); }
+		inline bool isStorageAddressRegisterReading() const { return bits & StatusBit:: SAR_READING; }
+		inline bool isStorageDataRegisterReading() const { return bits & StatusBit:: SDR_READING; }
+		inline bool isStorageDataRegisterWriting() const { return bits & StatusBit:: SDR_WRITING; }
+		inline bool isInstructionRegisterReading() const { return bits & StatusBit:: IR_READING; }
+		inline bool isInstructionRegisterWriting() const { return bits & StatusBit:: IR_WRITING; }
+		inline bool isInstructionAddressRegisterReading() const { return bits & StatusBit:: IAR_READING; }
+		inline bool isInstructionAddressRegisterWriting() const { return bits & StatusBit:: IAR_WRITING; }
+		inline bool isConstantOneWriting() const { return bits & StatusBit:: ONE; }
+		inline bool isALUResultWriting() const { return bits & StatusBit:: ALU_RESULT; }
+		inline bool isLeftALUOperandReading() const { return bits & StatusBit:: ALU_LEFT_OPERAND; }
+		inline bool isRightALUOperandReading() const { return bits & StatusBit:: ALU_RIGHT_OPERAND; }
+		inline bool isAccumulatorRegisterReading() const { return bits & StatusBit:: ACCUMULATOR_READING; }
+		inline bool isAccumulatorRegisterWriting() const { return bits & StatusBit:: ACCUMULATOR_WRITING; }
 
 		//uint8_t setters
 		inline void setJump(const uint8_t& jumpDestination) { bits &= ~JUMP_MASK; bits |= jumpDestination; }
@@ -99,6 +86,13 @@ namespace MiMa {
 		inline void setRightALUOperandReading() { bits |= StatusBit::ALU_RIGHT_OPERAND; }
 		inline void setAccumulatorRegisterReading() { bits |= StatusBit::ACCUMULATOR_READING; }
 		inline void setAccumulatorRegisterWriting() { bits |= StatusBit::ACCUMULATOR_WRITING; }
+
+		//does nothing
+		inline void pass() {}
+
+		//unconditional microprogram codes return themselves under any given condition
+		inline UnconditionalMicroProgramCode& get(const size_t&) override { return *this; }
+		inline UnconditionalMicroProgramCode& get(const StatusBitList&) override { return *this; }
 	};
 
 	typedef void(UnconditionalMicroProgramCode::* MicroProgramCodeSetFunction)();
@@ -110,25 +104,28 @@ namespace MiMa {
 	// A conditional line of microprogram code with two possibilities
 	// --------------------------------------------------------------
 
-	class ConditionalMicroProgramCode : public MicroProgramCode {
-		friend struct fmt::formatter<MiMa::ConditionalMicroProgramCode>;
+	class BinaryConditionalMicroProgramCode : public ConditionalMicroProgramCode {
+		friend struct fmt::formatter<MiMa::BinaryConditionalMicroProgramCode>;
 
 	private:
 		static const uint32_t JUMP_MASK = 0xFF;
 
 		const std::string conditionName;
-		bool condition = true; //TODO: replace with actual condition
 
-		uint32_t trueBits = 0;
-		uint32_t falseBits = 0;
-		inline uint32_t& bitsRef() { return (condition) ? trueBits : falseBits; };
-		inline uint32_t& bitsRef(bool ifCondition) { return (ifCondition) ? trueBits : falseBits; };
-		inline uint32_t bitsCopy() const { return (condition) ? trueBits : falseBits; };
+		UnconditionalMicroProgramCode trueCode;
+		UnconditionalMicroProgramCode falseCode;
 
 	public:
-		ConditionalMicroProgramCode(const std::string& conditionName);
+		BinaryConditionalMicroProgramCode(const std::string& conditionName);
 
-		//override get functions by using internal uint32_t representation of the microprogram code
+		inline UnconditionalMicroProgramCode& get(const size_t& condition) override { return (condition) ? trueCode : falseCode; }
+		inline UnconditionalMicroProgramCode& get(const StatusBitList& statusBits) override {
+			StatusBitList::const_iterator condition = statusBits.find(conditionName);
+			return (condition != statusBits.end() && condition->second) ? trueCode : falseCode;
+		}
+
+		/*
+		//provide get functions by using internal uint32_t representation of the microprogram code
 		inline uint8_t getNextInstructionDecoderState() const override { return (uint8_t)(bitsCopy() & StatusBit::FOLLOWING_ADDRESS); }
 		inline bool isWritingToMemory() const override { return bitsCopy() & StatusBit::STORAGE_WRITING; }
 		inline bool isReadingFromMemory() const override { return bitsCopy() & StatusBit::STORAGE_READING; }
@@ -171,6 +168,7 @@ namespace MiMa {
 		inline void setRightALUOperandReading(bool ifCondition) { bitsRef(ifCondition) |= StatusBit::ALU_RIGHT_OPERAND; }
 		inline void setAccumulatorRegisterReading(bool ifCondition) { bitsRef(ifCondition) |= StatusBit::ACCUMULATOR_READING; }
 		inline void setAccumulatorRegisterWriting(bool ifCondition) { bitsRef(ifCondition) |= StatusBit::ACCUMULATOR_WRITING; }
+		*/
 	};
 	
 
@@ -192,7 +190,7 @@ namespace MiMa {
 		MicroProgramCodeNode(const size_t& upperConditionLimit, MicroProgramCodeNode* next = nullptr, UnconditionalMicroProgramCode code = UnconditionalMicroProgramCode());
 	};
 
-	class MicroProgramCodeList {
+	class MicroProgramCodeList : public ConditionalMicroProgramCode {
 		friend struct fmt::formatter<MiMa::MicroProgramCodeList>;
 	private:
 		MicroProgramCodeNode* head;
@@ -216,7 +214,11 @@ namespace MiMa {
 		}
 
 
-		UnconditionalMicroProgramCode get(size_t condition);
+		UnconditionalMicroProgramCode& get(const size_t& condition) override;
+		inline UnconditionalMicroProgramCode& get(const StatusBitList& statusBits) override {
+			StatusBitList::const_iterator condition = statusBits.find(conditionName);
+			return (condition != statusBits.end()) ? get(condition->second) : get(0);
+		}
 	};
 
 
@@ -249,11 +251,11 @@ struct fmt::formatter<MiMa::UnconditionalMicroProgramCode> {
 };
 
 template<>
-struct fmt::formatter<MiMa::ConditionalMicroProgramCode> {
+struct fmt::formatter<MiMa::BinaryConditionalMicroProgramCode> {
 	constexpr auto parse(format_parse_context& ctx) { return ctx.end(); }
 
 	template<typename FormatContext>
-	auto format(const MiMa::ConditionalMicroProgramCode& code, FormatContext& ctx) { return fmt::format_to(ctx.out(), "true: 0x{:07X} / false: 0x{:07X}", code.trueBits, code.falseBits); }
+	auto format(const MiMa::BinaryConditionalMicroProgramCode& code, FormatContext& ctx) { return fmt::format_to(ctx.out(), "true: 0x{:07X} / false: 0x{:07X}", code.trueBits, code.falseBits); }
 };
 
 template<>
