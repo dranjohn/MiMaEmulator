@@ -164,12 +164,14 @@ struct fmt::formatter<MiMa::MicroProgramCodeList> {
 
 	template<typename FormatContext>
 	auto format(const MiMa::MicroProgramCodeList& codeList, FormatContext& ctx) {
+		//if the microprogram code list has only one element, print it in one line
 		if (codeList.head->upperConditionLimit == codeList.conditionMax) {
-			return fmt::format_to(ctx.out(), "condition {} up to max 0x{:X}: {}", codeList.conditionName, codeList.conditionMax, codeList.head->code);
+			return fmt::format_to(ctx.out(), "Conditional microcode for {} up to max 0x{:X}: {}", codeList.conditionName, codeList.conditionMax, codeList.head->code);
 		}
 
 
-		std::string listOutput = "OpCode conditional:\n{}";
+		//otherwise, format each node into a separate line
+		std::string listOutput = fmt::format("Conditional microcode for {} up to max 0x{:X}:\n{{}}", codeList.conditionName, codeList.conditionMax);
 		std::string nodeFormat = "up to 0x{:02X}: {}\n{{}}";
 
 		MiMa::MicroProgramCodeNode* current = codeList.head;

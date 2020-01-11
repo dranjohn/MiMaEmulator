@@ -41,7 +41,7 @@ namespace MiMa {
 			virtual void addToken(const char& control, char* token) = 0;
 
 			virtual void closeCompileMode() = 0;
-			virtual void finish(char* remaining) = 0;
+			virtual void finish(char* remaining);
 		};
 
 
@@ -60,7 +60,6 @@ namespace MiMa {
 			void addToken(const char& control, char* token) override;
 
 			void closeCompileMode() override;
-			void finish(char* remaining) override;
 		};
 
 		class ConditionalCompileMode : public CompileMode {
@@ -77,7 +76,6 @@ namespace MiMa {
 			void addToken(const char& control, char* token) override;
 
 			void closeCompileMode() override;
-			void finish(char* remaining) override;
 		};
 
 
@@ -111,7 +109,7 @@ namespace MiMa {
 		static MicroProgram compile(char* microProgramCode);
 		static MicroProgram compile(std::istream& microProgramCode);
 		 
-		static MicroProgram compileFile(char* fileName);
+		static MicroProgram compileFile(const char*& fileName);
 
 	private:
 		static MicroProgram compile(CharStream& microProgramCodeStream);

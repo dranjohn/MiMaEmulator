@@ -61,7 +61,7 @@ namespace MiMa {
 		Data storageDataRegister : DATA_SIZE;
 
 		//Exchangable MiMa components:
-		MicroProgram instructionDecoder;
+		const MicroProgram instructionDecoder;
 		MemoryCell* memory;
 
 		//MiMa state:
@@ -69,7 +69,7 @@ namespace MiMa {
 		uint8_t instructionDecoderState;
 		MemoryState memoryState;
 	public:
-		MinimalMachine(MicroProgram instructionDecoder, MemoryCell memory[MEMORY_CAPACITY]);
+		MinimalMachine(const MicroProgram& instructionDecoder, MemoryCell memory[MEMORY_CAPACITY]);
 		~MinimalMachine() { MIMA_LOG_INFO("Destructed MiMa"); }
 
 		//emulate minimal machine

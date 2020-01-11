@@ -99,6 +99,8 @@ namespace MiMa {
 	}
 
 	MicroProgramCode MicroProgramCodeList::get(const StatusBitMap& statusBits) {
+		//find the value of the given condition
+		//if it is not in the map, it defaults to zero
 		StatusBitMap::const_iterator conditionLocation = statusBits.find(conditionName);
 
 		size_t condition = 0;
@@ -106,6 +108,7 @@ namespace MiMa {
 			condition = std::min(conditionLocation->second, conditionMax);
 		}
 
+		//return microprogram code dependent on the condition value
 		MicroProgramCodeNode* current = head;
 		while (current->upperConditionLimit < condition) {
 			current = current->next;

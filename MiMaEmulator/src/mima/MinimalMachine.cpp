@@ -11,7 +11,7 @@
 
 
 namespace MiMa {
-	MinimalMachine::MinimalMachine(MicroProgram instructionDecoder, MemoryCell memory[MEMORY_CAPACITY]) :
+	MinimalMachine::MinimalMachine(const MicroProgram& instructionDecoder, MemoryCell memory[MEMORY_CAPACITY]) :
 		//registers
 		accumulator({ 0 }),
 		instructionAddressRegister(0),

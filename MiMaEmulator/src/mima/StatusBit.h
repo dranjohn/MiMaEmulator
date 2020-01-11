@@ -5,6 +5,7 @@
 #define BIT(n) (1 << n)
 
 namespace MiMa {
+	//used by the default microprogram code representation
 	namespace StatusBit {
 		constexpr uint32_t FOLLOWING_ADDRESS = 0xFF;
 		constexpr uint32_t RESERVED = 0x300;
