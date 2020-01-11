@@ -70,49 +70,49 @@ namespace MiMa {
 	//Utility: convert register write identifiers to corresponding control bits
 	MicroProgramCodeSetFunction getWriteBit(const std::string& identifier) {
 		if (identifier == "SDR")
-			return &UnconditionalMicroProgramCode::setStorageDataRegisterWriting;
+			return &MicroProgramCode::setStorageDataRegisterWriting;
 		if (identifier == "IR")
-			return &UnconditionalMicroProgramCode::setInstructionRegisterWriting;
+			return &MicroProgramCode::setInstructionRegisterWriting;
 		if (identifier == "IAR")
-			return &UnconditionalMicroProgramCode::setInstructionAddressRegisterWriting;
+			return &MicroProgramCode::setInstructionAddressRegisterWriting;
 		if (identifier == "ONE")
-			return &UnconditionalMicroProgramCode::setConstantOneWriting;
+			return &MicroProgramCode::setConstantOneWriting;
 		if (identifier == "Z")
-			return &UnconditionalMicroProgramCode::setALUResultWriting;
+			return &MicroProgramCode::setALUResultWriting;
 		if (identifier == "ACCU")
-			return &UnconditionalMicroProgramCode::setAccumulatorRegisterWriting;
+			return &MicroProgramCode::setAccumulatorRegisterWriting;
 
-		return &UnconditionalMicroProgramCode::pass;
+		return &MicroProgramCode::pass;
 	}
 
 	//Utility: convert register read identifiers to corresponding control bits
 	MicroProgramCodeSetFunction getReadBit(const std::string& identifier) {
 		if (identifier == "SAR")
-			return &UnconditionalMicroProgramCode::setStorageAddressRegisterReading;
+			return &MicroProgramCode::setStorageAddressRegisterReading;
 		if (identifier == "SDR")
-			return &UnconditionalMicroProgramCode::setStorageDataRegisterReading;
+			return &MicroProgramCode::setStorageDataRegisterReading;
 		if (identifier == "IR")
-			return &UnconditionalMicroProgramCode::setInstructionRegisterReading;
+			return &MicroProgramCode::setInstructionRegisterReading;
 		if (identifier == "IAR")
-			return &UnconditionalMicroProgramCode::setInstructionAddressRegisterReading;
+			return &MicroProgramCode::setInstructionAddressRegisterReading;
 		if (identifier == "X")
-			return &UnconditionalMicroProgramCode::setLeftALUOperandReading;
+			return &MicroProgramCode::setLeftALUOperandReading;
 		if (identifier == "Y")
-			return &UnconditionalMicroProgramCode::setRightALUOperandReading;
+			return &MicroProgramCode::setRightALUOperandReading;
 		if (identifier == "ACCU")
-			return &UnconditionalMicroProgramCode::setAccumulatorRegisterReading;
+			return &MicroProgramCode::setAccumulatorRegisterReading;
 
-		return &UnconditionalMicroProgramCode::pass;
+		return &MicroProgramCode::pass;
 	}
 
 	//Utility: predefined binary operators in compilation
-	static const std::function<void(UnconditionalMicroProgramCode&)> NO_MICROPROGRAM_CODE_MODIFICATION = [](UnconditionalMicroProgramCode&) {};
+	static const std::function<void(MicroProgramCode&)> NO_MICROPROGRAM_CODE_MODIFICATION = [](MicroProgramCode&) {};
 
 	BinaryOperator MOVE_OPERATOR = [](const std::string& leftOperand, const std::string& rightOperand)->MicroProgramCodeModifier {
 		MicroProgramCodeSetFunction setWrite = getWriteBit(leftOperand);
 		MicroProgramCodeSetFunction setRead = getReadBit(rightOperand);
 
-		MicroProgramCodeModifier registerTransfer = [setWrite, setRead](UnconditionalMicroProgramCode& microProgramCode) {
+		MicroProgramCodeModifier registerTransfer = [setWrite, setRead](MicroProgramCode& microProgramCode) {
 			(microProgramCode.*setWrite)();
 			(microProgramCode.*setRead)();
 		};
@@ -121,27 +121,27 @@ namespace MiMa {
 	BinaryOperator SET_OPERATOR = [](const std::string& leftOperand, const std::string& rightOperand)->MicroProgramCodeModifier {
 		if (leftOperand == "R") {
 			if (rightOperand == "1") {
-				return [](UnconditionalMicroProgramCode& code) { code.enableMemoryRead(); };
+				return [](MicroProgramCode& code) { code.enableMemoryRead(); };
 			}
 			if (rightOperand == "0") {
-				return [](UnconditionalMicroProgramCode& code) { code.disableMemoryRead(); };
+				return [](MicroProgramCode& code) { code.disableMemoryRead(); };
 			}
 			return NO_MICROPROGRAM_CODE_MODIFICATION;
 		}
 
 		if (leftOperand == "W") {
 			if (rightOperand == "1") {
-				return [](UnconditionalMicroProgramCode& code) { code.enableMemoryWrite(); };
+				return [](MicroProgramCode& code) { code.enableMemoryWrite(); };
 			}
 			if (rightOperand == "0") {
-				return [](UnconditionalMicroProgramCode& code) { code.disableMemoryWrite(); };
+				return [](MicroProgramCode& code) { code.disableMemoryWrite(); };
 			}
 			return NO_MICROPROGRAM_CODE_MODIFICATION;
 		}
 
 		if (leftOperand == "ALU") {
 			uint8_t ALUCode = getALUCode(rightOperand);
-			return [ALUCode](UnconditionalMicroProgramCode& code) { code.setALUCode(ALUCode); };
+			return [ALUCode](MicroProgramCode& code) { code.setALUCode(ALUCode); };
 		}
 
 		return NO_MICROPROGRAM_CODE_MODIFICATION;
@@ -189,7 +189,7 @@ namespace MiMa {
 
 		if (labelLocation != compiler.labels.end()) { //label found
 			MIMA_LOG_TRACE("Found microprogram jump instruction from 0x{:02X} to 0x{:02X}", compiler.firstFree, labelLocation->second);
-			currentCode.apply(&UnconditionalMicroProgramCode::setJump, labelLocation->second, 0, 0xFF);
+			currentCode.apply(&MicroProgramCode::setJump, labelLocation->second, 0, 0xFF);
 		}
 		else { //label not found, add this to unresolved references
 			MIMA_LOG_TRACE("Found unresolved microprogram jump from 0x{:02X}", compiler.firstFree);
@@ -197,7 +197,7 @@ namespace MiMa {
 			uint8_t firstFreeCopy = compiler.firstFree;
 			std::shared_ptr<MicroProgramCodeList[]>& memoryReference = compiler.memory;
 			std::function<bool(const uint8_t&)> labelAddListener = [firstFreeCopy, memoryReference](const uint8_t& labelAddress) {
-				memoryReference[firstFreeCopy].apply(&UnconditionalMicroProgramCode::setJump, labelAddress, 0, 0xFF);
+				memoryReference[firstFreeCopy].apply(&MicroProgramCode::setJump, labelAddress, 0, 0xFF);
 				
 				return true;
 			};
@@ -215,7 +215,7 @@ namespace MiMa {
 
 		if (labelLocation != compiler.labels.end()) { //label found
 			MIMA_LOG_TRACE("Found microprogram jump instruction from 0x{:02X} to 0x{:02X} in range from 0x{:08X} to 0x{:08X}", compiler.firstFree, labelLocation->second, lowerLimit, upperLimit);
-			currentCode.apply(&UnconditionalMicroProgramCode::setJump, labelLocation->second, lowerLimit, upperLimit);
+			currentCode.apply(&MicroProgramCode::setJump, labelLocation->second, lowerLimit, upperLimit);
 		}
 		else { //label not found, add this to unresolved references
 			MIMA_LOG_TRACE("Found unresolved microprogram jump from 0x{:02X} for range from 0x{:08X} to 0x{:08X}", compiler.firstFree, lowerLimit, upperLimit);
@@ -223,7 +223,7 @@ namespace MiMa {
 			uint8_t firstFreeCopy = compiler.firstFree;
 			std::shared_ptr<MicroProgramCodeList[]>& memoryReference = compiler.memory;
 			std::function<bool(const uint8_t&)> labelAddListener = [firstFreeCopy, memoryReference, lowerLimit, upperLimit](const uint8_t& labelAddress) {
-				memoryReference[firstFreeCopy].apply(&UnconditionalMicroProgramCode::setJump, labelAddress, lowerLimit, upperLimit);
+				memoryReference[firstFreeCopy].apply(&MicroProgramCode::setJump, labelAddress, lowerLimit, upperLimit);
 				MIMA_LOG_TRACE("Resolved label at 0x{:02X} to 0x{:02X} for range from 0x{:02X} to 0x{:02X}, current value: {}", firstFreeCopy, labelAddress, lowerLimit, upperLimit, memoryReference[firstFreeCopy]);
 
 				return true;
@@ -246,16 +246,11 @@ namespace MiMa {
 	void MicroProgramCompiler::CompileMode::endOfLine(bool& fixedJump, MicroProgramCodeList& currentCode) {
 		if (!fixedJump) {
 			MIMA_LOG_TRACE("Setting automatic jump to next address 0x{:02X} for microprogram instruction {}", compiler.firstFree + 1, currentCode);
-			currentCode.apply(&UnconditionalMicroProgramCode::setJump, compiler.firstFree + 1, 0, 0xFF);
+			currentCode.apply(&MicroProgramCode::setJump, compiler.firstFree + 1, 0, 0xFF);
 		}
-
-		MIMA_LOG_TRACE("Compiled at 0x{:02X}: microcode {}", compiler.firstFree, currentCode);
-
 		fixedJump = false;
-		compiler.firstFree++;
-		MIMA_ASSERT_WARN(compiler.firstFree != 0, "Memory position overflow in compilation, continuing to compile at 0x00.");
 
-		compiler.lineStart = true;
+		endOfLine(currentCode);
 	}
 
 
@@ -267,7 +262,10 @@ namespace MiMa {
 	MicroProgramCompiler::DefaultCompileMode::DefaultCompileMode(MicroProgramCompiler& compiler) :
 		CompileMode(compiler),
 		operatorBuffer(std::string(""), [](const std::string&, const std::string&) { return NO_MICROPROGRAM_CODE_MODIFICATION; })
-	{}
+	{
+		compiler.memory[compiler.firstFree].reset();
+		MIMA_LOG_TRACE("Opened default compiler mode");
+	}
 
 
 	bool MicroProgramCompiler::DefaultCompileMode::isControl(const char& control) {
@@ -299,6 +297,7 @@ namespace MiMa {
 			//if the token is empty, the break operator stands for end-of-line
 			if (*token == 0) {
 				CompileMode::endOfLine(fixedJump, compiler.memory[compiler.firstFree]);
+				compiler.memory[compiler.firstFree].reset();
 				break;
 			}
 
@@ -328,7 +327,7 @@ namespace MiMa {
 
 
 	void MicroProgramCompiler::DefaultCompileMode::closeCompileMode() {
-		MIMA_LOG_TRACE("Closing default compiler mode");
+		MIMA_LOG_TRACE("Closed default compiler mode");
 	}
 
 	void MicroProgramCompiler::DefaultCompileMode::finish(char* remaining) {
@@ -342,9 +341,16 @@ namespace MiMa {
 	// Conditional jump compile mode of the microprogram compiler
 	// ----------------------------------------------------------
 
-	MicroProgramCompiler::ConditionalCompileMode::ConditionalCompileMode(MicroProgramCompiler& compiler) :
-		CompileMode(compiler)
-	{}
+	MicroProgramCompiler::ConditionalCompileMode::ConditionalCompileMode(MicroProgramCompiler& compiler, const std::string& conditionName, const size_t& conditionMax) :
+		CompileMode(compiler),
+		conditionName(conditionName),
+		conditionMax(conditionMax),
+		lowerLimit(0),
+		upperLimit(conditionMax)
+	{
+		compiler.memory[compiler.firstFree].reset(conditionName, conditionMax);
+		MIMA_LOG_TRACE("Opened conditional jump compiler mode for condition '{}' up to 0x{:X}", conditionName, conditionMax);
+	}
 
 
 	bool MicroProgramCompiler::ConditionalCompileMode::isControl(const char& control) {
@@ -370,6 +376,7 @@ namespace MiMa {
 			//if the token is empty, the break operator stands for end-of-line
 			if (*token == 0) {
 				CompileMode::endOfLine(compiler.memory[compiler.firstFree]);
+				compiler.memory[compiler.firstFree].reset(conditionName, conditionMax);
 				break;
 			}
 
@@ -378,16 +385,16 @@ namespace MiMa {
 				CompileMode::addJump(token, compiler.memory[compiler.firstFree], lowerLimit, upperLimit);
 
 				lowerLimit = 0;
-				upperLimit = MAX_UPPER_LIMIT;
+				upperLimit = conditionMax;
 				break;
 			}
 
 			if (std::string(token) == "next") {
-				compiler.memory[compiler.firstFree].apply(&UnconditionalMicroProgramCode::setJump, compiler.firstFree + 1, lowerLimit, upperLimit);
+				compiler.memory[compiler.firstFree].apply(&MicroProgramCode::setJump, compiler.firstFree + 1, lowerLimit, upperLimit);
 				MIMA_LOG_INFO("Added jump to instruction {:02X} in range from {} to {}", compiler.firstFree + 1, lowerLimit, upperLimit);
 
 				lowerLimit = 0;
-				upperLimit = MAX_UPPER_LIMIT;
+				upperLimit = conditionMax;
 				break;
 			}
 
@@ -400,7 +407,7 @@ namespace MiMa {
 
 
 	void MicroProgramCompiler::ConditionalCompileMode::closeCompileMode() {
-		MIMA_LOG_TRACE("Closing conditional compiler mode");
+		MIMA_LOG_TRACE("Closed conditional compiler mode");
 	}
 
 	void MicroProgramCompiler::ConditionalCompileMode::finish(char* remaining) {
@@ -418,7 +425,7 @@ namespace MiMa {
 
 		//0xFF is reserved for halt
 		labels.insert({ "halt", HALT_RESERVED });
-		memory[HALT_RESERVED].apply(&UnconditionalMicroProgramCode::setJump, HALT_RESERVED, 0, HALT_RESERVED);
+		memory[HALT_RESERVED].apply(&MicroProgramCode::setJump, HALT_RESERVED, 0, HALT_RESERVED);
 
 		MIMA_LOG_INFO("Initialized microcode compiler");
 	};
@@ -440,8 +447,19 @@ namespace MiMa {
 
 		//otherwise, execute compiler directive
 		std::string directive(token);
+		
+		//a compiler directive starting with "//" is a comment
+		if (directive.rfind("//", 0) == 0) {
+			MIMA_LOG_TRACE("Discarding comment '{}'", directive);
+			return;
+		}
+
+		//if the compiler directive is not a comment, it is a function
+		//use regex to match the function name and parameters
 		std::smatch matches;
 
+		//functions are structured like in C++:
+		//function_name(param_0, param_1, ..., param_n)
 		std::regex funcRegex(R"((?:(.*)\((.*)\)))");
 		std::regex paramRegex(R"((.+?)(?:$|,)\s*)");
 
@@ -455,10 +473,16 @@ namespace MiMa {
 				parameters = matches.suffix();
 			}
 
+			//compile mode function
 			if (func == "cm") {
-				if (arguments.size() == 1 && arguments[0] == "default") {
+				if (arguments[0] == "default") {
+					if (arguments.size() != 1) {
+						MIMA_LOG_ERROR("Expected one argument for compiler directive function {}, found {}", func, arguments.size());
+						return;
+					}
+
 					if (!lineStart) {
-						MIMA_LOG_ERROR("Discarding invalid compiler directive 'cm(default)!' which is not a line start");
+						MIMA_LOG_ERROR("Discarding invalid compiler directive '{}' which is not a line start", directive);
 						return;
 					}
 
@@ -469,19 +493,27 @@ namespace MiMa {
 					return;
 				}
 
-				if (arguments.size() == 1 && arguments[0] == "conditional") {
+				if (arguments[0] == "conditional") {
+					if (arguments.size() != 3) {
+						MIMA_LOG_ERROR("Expected three arguments for compiler directive function {}, found {}", func, arguments.size());
+						return;
+					}
+
 					if (!lineStart) {
-						MIMA_LOG_ERROR("Discarding invalid compiler directive 'cm(conditional)!' which is not a line start");
+						MIMA_LOG_ERROR("Discarding invalid compiler directive '{}' which is not a line start", directive);
 						return;
 					}
 
 					currentCompileMode->closeCompileMode();
-					currentCompileMode.reset(new ConditionalCompileMode(*this));
+					currentCompileMode.reset(new ConditionalCompileMode(*this, arguments[1], std::stoi(arguments[2])));
 
 					MIMA_LOG_TRACE("Switched to a conditional decode compiler compile mode");
 					return;
 				}
 			}
+
+			MIMA_LOG_ERROR("Expected at least one argument for compiler directive function {}", func);
+			return;
 		}
 
 		MIMA_LOG_ERROR("Discarding unknwon compiler directive '{}!'", directive);

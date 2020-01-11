@@ -1,11 +1,15 @@
 #include "MicroProgram.h"
 
 namespace MiMa {
-	MicroProgramCodeNode::MicroProgramCodeNode(const size_t& upperConditionLimit, MicroProgramCodeNode* next, UnconditionalMicroProgramCode code) :
+	MicroProgramCodeNode::MicroProgramCodeNode(const size_t& upperConditionLimit, MicroProgramCodeNode* next, MicroProgramCode code) :
 		next(next),
 		code(code),
 		upperConditionLimit(upperConditionLimit)
 	{}
+
+	MicroProgramCodeNode::~MicroProgramCodeNode() {
+		if (next != nullptr) delete next;
+	}
 
 
 
@@ -16,19 +20,24 @@ namespace MiMa {
 	{}
 
 	MicroProgramCodeList::~MicroProgramCodeList() {
-		MicroProgramCodeNode* current = head;
-		MicroProgramCodeNode* next;
-
-		while (current != nullptr) {
-			next = current->next;
-			delete current;
-
-			current = next;
-		}
+		delete head;
 	}
 
 
-	void MicroProgramCodeList::apply(const std::function<void(UnconditionalMicroProgramCode&)>& func, const size_t& lowerLimit, size_t upperLimit) {
+	void MicroProgramCodeList::reset() {
+		reset("", 0);
+	}
+
+	void MicroProgramCodeList::reset(const std::string& conditionName, const size_t& conditionMax) {
+		this->conditionName = conditionName;
+		this->conditionMax = conditionMax;
+
+		delete head;
+		head = new MicroProgramCodeNode(conditionMax);
+	}
+
+
+	void MicroProgramCodeList::apply(const std::function<void(MicroProgramCode&)>& func, const size_t& lowerLimit, size_t upperLimit) {
 		upperLimit = std::min(upperLimit, conditionMax);
 		if (lowerLimit > upperLimit) {
 			return;
@@ -89,11 +98,16 @@ namespace MiMa {
 		func(upperLimitNode->code);
 	}
 
-	UnconditionalMicroProgramCode& MicroProgramCodeList::get(const size_t& condition) {
-		size_t upperLimit = std::min(condition, conditionMax);
-		MicroProgramCodeNode* current = head;
+	MicroProgramCode MicroProgramCodeList::get(const StatusBitMap& statusBits) {
+		StatusBitMap::const_iterator conditionLocation = statusBits.find(conditionName);
 
-		while (current->upperConditionLimit < upperLimit) {
+		size_t condition = 0;
+		if (conditionLocation != statusBits.end()) {
+			condition = std::min(conditionLocation->second, conditionMax);
+		}
+
+		MicroProgramCodeNode* current = head;
+		while (current->upperConditionLimit < condition) {
 			current = current->next;
 		}
 

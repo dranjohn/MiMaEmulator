@@ -37,11 +37,12 @@ namespace MiMa {
 		MIMA_LOG_TRACE("Starting MiMa clock cycle emulation");
 
 		//get microcode for current register transfer
-		uint8_t opCode = instructionRegister.opCode.value;
-		UnconditionalMicroProgramCode microCode = instructionDecoder.getMicroCode(instructionDecoderState, opCode);
+		StatusBitMap statusBits;
+		statusBits.insert({ "op_code", instructionRegister.opCode.value });
+		statusBits.insert({ "accumulator_negative", accumulator.negative.value });
+		MicroProgramCode microCode = instructionDecoder.getMicroCode(instructionDecoderState, statusBits);
 
 		MIMA_LOG_TRACE("Found microprogram instruction {}", microCode);
-		MIMA_LOG_TRACE("Found operation code 0x{:02X}", opCode);
 
 		//put data on the data bus
 		Data dataBus = 0;
@@ -190,7 +191,7 @@ namespace MiMa {
 
 		DataNode<std::string>& instructionDecoderRoot = root.addChild("Instruction decoder state");
 		instructionDecoderRoot.addChild(fmt::format("next microprogram instruction address: 0x{:02X}", instructionDecoderState));
-		instructionDecoderRoot.addChild(fmt::format("next microprogram instruction code: {}", instructionDecoder.getMicroCode(instructionDecoderState, 0)));
+		instructionDecoderRoot.addChild(fmt::format("next microprogram instruction code: {}", instructionDecoder.getMicroCode(instructionDecoderState, StatusBitMap())));
 
 		DataNode<std::string>& registersRoot = root.addChild("Register states");
 		registersRoot.addChild(fmt::format("IAR: 0x{:05X}", instructionAddressRegister));

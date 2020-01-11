@@ -4,6 +4,7 @@
 #include <memory>
 #include <algorithm>
 #include <functional>
+#include <unordered_map>
 
 #include <fmt/format.h>
 
@@ -14,28 +15,11 @@
 
 
 namespace MiMa {
-	typedef std::unordered_map<std::string, size_t> StatusBitList;
-
-	// ----------------------------------------------------------------------------------------
-	// One code line (with or without condition) in a microprogram running on a minimal machine
-	// ----------------------------------------------------------------------------------------
-
-	class UnconditionalMicroProgramCode;
-
-	class ConditionalMicroProgramCode {
-	public:
-		virtual UnconditionalMicroProgramCode& get(const size_t& condition) = 0;
-		virtual UnconditionalMicroProgramCode& get(const StatusBitList& statusBits) = 0;
-	};
+	typedef std::unordered_map<std::string, size_t> StatusBitMap;
 
 
-
-	// ------------------------------------------
-	// An unconditional line of microprogram code
-	// ------------------------------------------
-
-	class UnconditionalMicroProgramCode : public ConditionalMicroProgramCode {
-		friend struct fmt::formatter <MiMa::UnconditionalMicroProgramCode>;
+	class MicroProgramCode {
+		friend struct fmt::formatter<MiMa::MicroProgramCode>;
 
 	private:
 		static const uint32_t JUMP_MASK = 0xFF;
@@ -89,39 +73,10 @@ namespace MiMa {
 
 		//does nothing
 		inline void pass() {}
-
-		//unconditional microprogram codes return themselves under any given condition
-		inline UnconditionalMicroProgramCode& get(const size_t&) override { return *this; }
-		inline UnconditionalMicroProgramCode& get(const StatusBitList&) override { return *this; }
 	};
 
-	typedef void(UnconditionalMicroProgramCode::* MicroProgramCodeSetFunction)();
-	typedef void(UnconditionalMicroProgramCode::* MicroProgramCodeSet8BitFunction)(const uint8_t&);
-
-
-
-	// --------------------------------------------------------------
-	// A conditional line of microprogram code with two possibilities
-	// --------------------------------------------------------------
-
-	class BinaryConditionalMicroProgramCode : public ConditionalMicroProgramCode {
-		friend struct fmt::formatter<MiMa::BinaryConditionalMicroProgramCode>;
-
-	private:
-		const std::string conditionName;
-
-		UnconditionalMicroProgramCode trueCode;
-		UnconditionalMicroProgramCode falseCode;
-
-	public:
-		BinaryConditionalMicroProgramCode(const std::string& conditionName) : conditionName(conditionName) {}
-
-		inline UnconditionalMicroProgramCode& get(const size_t& condition) override { return (condition) ? trueCode : falseCode; }
-		inline UnconditionalMicroProgramCode& get(const StatusBitList& statusBits) override {
-			StatusBitList::const_iterator condition = statusBits.find(conditionName);
-			return (condition != statusBits.end() && condition->second) ? trueCode : falseCode;
-		}
-	};
+	typedef void(MicroProgramCode::* MicroProgramCodeSetFunction)();
+	typedef void(MicroProgramCode::* MicroProgramCodeSet8BitFunction)(const uint8_t&);
 	
 
 
@@ -137,40 +92,41 @@ namespace MiMa {
 		MicroProgramCodeNode* next;
 
 		size_t upperConditionLimit;
-		UnconditionalMicroProgramCode code;
+		MicroProgramCode code;
 
-		MicroProgramCodeNode(const size_t& upperConditionLimit, MicroProgramCodeNode* next = nullptr, UnconditionalMicroProgramCode code = UnconditionalMicroProgramCode());
+		MicroProgramCodeNode(const size_t& upperConditionLimit, MicroProgramCodeNode* next = nullptr, MicroProgramCode code = MicroProgramCode());
+	public:
+		~MicroProgramCodeNode();
 	};
 
-	class MicroProgramCodeList : public ConditionalMicroProgramCode {
+	class MicroProgramCodeList {
 		friend struct fmt::formatter<MiMa::MicroProgramCodeList>;
 	private:
 		MicroProgramCodeNode* head;
 
-		const std::string conditionName;
-		const size_t conditionMax;
+		std::string conditionName;
+		size_t conditionMax;
 
 	public:
-		MicroProgramCodeList(const std::string& conditionName = "op_code", const size_t& conditionMax = 0xFF);
+		MicroProgramCodeList(const std::string& conditionName = "", const size_t& conditionMax = 0);
 		~MicroProgramCodeList();
 
-		//apply function
-		void apply(const std::function<void(UnconditionalMicroProgramCode&)>& func, const size_t& lowerLimit, size_t upperLimit);
+		void reset();
+		void reset(const std::string& conditionName, const size_t& conditionMax);
+
+
+		void apply(const std::function<void(MicroProgramCode&)>& func, const size_t& lowerLimit, size_t upperLimit);
 
 		inline void apply(const MicroProgramCodeSetFunction& func, const size_t& lowerLimit, size_t upperLimit) {
-			apply([func](UnconditionalMicroProgramCode& microProgramCode) { std::invoke(func, microProgramCode); }, lowerLimit, upperLimit);
+			apply([func](MicroProgramCode& microProgramCode) { std::invoke(func, microProgramCode); }, lowerLimit, upperLimit);
 		}
 
 		inline void apply(const MicroProgramCodeSet8BitFunction& func, const uint8_t& value, const size_t& lowerLimit, const size_t& upperLimit) {
-			apply([func, value](UnconditionalMicroProgramCode& microProgramCode) { std::invoke(std::bind(func, std::placeholders::_1, value), microProgramCode); }, lowerLimit, upperLimit);
+			apply([func, value](MicroProgramCode& microProgramCode) { std::invoke(std::bind(func, std::placeholders::_1, value), microProgramCode); }, lowerLimit, upperLimit);
 		}
 
 
-		UnconditionalMicroProgramCode& get(const size_t& condition) override;
-		inline UnconditionalMicroProgramCode& get(const StatusBitList& statusBits) override {
-			StatusBitList::const_iterator condition = statusBits.find(conditionName);
-			return (condition != statusBits.end()) ? get(condition->second) : get(0);
-		}
+		MicroProgramCode get(const StatusBitMap& statusBits);
 	};
 
 
@@ -189,25 +145,17 @@ namespace MiMa {
 	public:
 		MicroProgram(const std::shared_ptr<MicroProgramCodeList[]>& memory) : memory(memory) {}
 
-		inline const UnconditionalMicroProgramCode getMicroCode(const uint8_t& memoryAddress, const uint8_t& opCode) const { return memory[memoryAddress].get(opCode); }
+		inline const MicroProgramCode getMicroCode(const uint8_t& memoryAddress, const StatusBitMap& statusBits) const { return memory[memoryAddress].get(statusBits); }
 	};
 }
 
 //microprogramm code fmt formatting definition
 template<>
-struct fmt::formatter<MiMa::UnconditionalMicroProgramCode> {
+struct fmt::formatter<MiMa::MicroProgramCode> {
 	constexpr auto parse(format_parse_context& ctx) { return ctx.end(); }
 
 	template<typename FormatContext>
-	auto format(const MiMa::UnconditionalMicroProgramCode& code, FormatContext& ctx) { return fmt::format_to(ctx.out(), "0x{:07X}", code.bits); }
-};
-
-template<>
-struct fmt::formatter<MiMa::BinaryConditionalMicroProgramCode> {
-	constexpr auto parse(format_parse_context& ctx) { return ctx.end(); }
-
-	template<typename FormatContext>
-	auto format(const MiMa::BinaryConditionalMicroProgramCode& code, FormatContext& ctx) { return fmt::format_to(ctx.out(), "true: 0x{:07X} / false: 0x{:07X}", code.trueBits, code.falseBits); }
+	auto format(const MiMa::MicroProgramCode& code, FormatContext& ctx) { return fmt::format_to(ctx.out(), "0x{:07X}", code.bits); }
 };
 
 template<>
@@ -217,7 +165,7 @@ struct fmt::formatter<MiMa::MicroProgramCodeList> {
 	template<typename FormatContext>
 	auto format(const MiMa::MicroProgramCodeList& codeList, FormatContext& ctx) {
 		if (codeList.head->upperConditionLimit == codeList.conditionMax) {
-			return fmt::format_to(ctx.out(), "{}", codeList.head->code);
+			return fmt::format_to(ctx.out(), "condition {} up to max 0x{:X}: {}", codeList.conditionName, codeList.conditionMax, codeList.head->code);
 		}
 
 
