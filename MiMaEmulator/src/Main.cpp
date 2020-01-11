@@ -2,8 +2,8 @@
 #include <memory>
 #include <vector>
 
-#include "mima/MicroProgram.h"
-#include "mima/MicroProgramCompiler.h"
+#include "mima/microprogram/MicroProgram.h"
+#include "mima/microprogram/MicroProgramCompiler.h"
 #include "mima/MinimalMachine.h"
 #include "debug/Log.h"
 

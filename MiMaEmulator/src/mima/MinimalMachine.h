@@ -3,8 +3,7 @@
 #include <string>
 #include <memory>
 
-#include "StatusBit.h"
-#include "MicroProgram.h"
+#include "microprogram/MicroProgram.h"
 #include "util/MinType.h"
 #include "util/Bitfield.h"
 #include "debug/Log.h"
