@@ -18,8 +18,7 @@ int main() {
 		"Z > IAR;;\n"
 		"SDR > IR;;\n\n"
 
-		//"cm(conditional, op_code, 255)!\n"
-		"cm(conditional)!\n"
+		"cm(conditional, op_code, 255)!\n"
 		"#halt;\n"
 		"0+ 15- #ldc;\n"
 		"16+ 31- #ldv;\n"

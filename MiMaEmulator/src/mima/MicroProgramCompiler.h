@@ -65,12 +65,13 @@ namespace MiMa {
 
 		class ConditionalCompileMode : public CompileMode {
 		private:
-			const static size_t MAX_UPPER_LIMIT = 0xFF;
+			const std::string conditionName;
+			const size_t conditionMax;
 
-			size_t lowerLimit = 0;
-			size_t upperLimit = MAX_UPPER_LIMIT;
+			size_t lowerLimit;
+			size_t upperLimit;
 		public:
-			ConditionalCompileMode(MicroProgramCompiler& compiler);
+			ConditionalCompileMode(MicroProgramCompiler& compiler, const std::string& conditionName, const size_t& conditionMax);
 
 			bool isControl(const char& control) override;
 			void addToken(const char& control, char* token) override;

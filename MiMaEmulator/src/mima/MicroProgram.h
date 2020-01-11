@@ -4,6 +4,7 @@
 #include <memory>
 #include <algorithm>
 #include <functional>
+#include <unordered_map>
 
 #include <fmt/format.h>
 
@@ -14,6 +15,9 @@
 
 
 namespace MiMa {
+	typedef std::unordered_map<std::string, size_t> StatusBitMap;
+
+
 	class MicroProgramCode {
 		friend struct fmt::formatter<MiMa::MicroProgramCode>;
 
@@ -80,17 +84,25 @@ namespace MiMa {
 		MicroProgramCode code;
 
 		MicroProgramCodeNode(const size_t& upperConditionLimit, MicroProgramCodeNode* next = nullptr, MicroProgramCode code = MicroProgramCode());
+	public:
+		~MicroProgramCodeNode();
 	};
 
 	class MicroProgramCodeList {
 		friend struct fmt::formatter<MiMa::MicroProgramCodeList>;
 	private:
 		MicroProgramCodeNode* head;
-		const size_t conditionMax;
+
+		std::string conditionName;
+		size_t conditionMax;
 
 	public:
-		MicroProgramCodeList(const size_t& conditionMax = 0xFF);
+		MicroProgramCodeList(const std::string& conditionName = "", const size_t& conditionMax = 0);
 		~MicroProgramCodeList();
+
+		void reset();
+		void reset(const std::string& conditionName, const size_t& conditionMax);
+
 
 		void apply(const std::function<void(MicroProgramCode&)>& func, const size_t& lowerLimit, size_t upperLimit);
 
@@ -103,7 +115,7 @@ namespace MiMa {
 		}
 
 
-		MicroProgramCode get(size_t condition);
+		MicroProgramCode get(const StatusBitMap& statusBits);
 	};
 
 
@@ -114,7 +126,7 @@ namespace MiMa {
 	public:
 		MicroProgram(const std::shared_ptr<MicroProgramCodeList[]>& memory) : memory(memory) {}
 
-		inline const MicroProgramCode getMicroCode(const uint8_t& memoryAddress, const uint8_t& opCode) const { return memory[memoryAddress].get(opCode); }
+		inline const MicroProgramCode getMicroCode(const uint8_t& memoryAddress, const StatusBitMap& statusBits) const { return memory[memoryAddress].get(statusBits); }
 	};
 }
 
@@ -134,7 +146,7 @@ struct fmt::formatter<MiMa::MicroProgramCodeList> {
 	template<typename FormatContext>
 	auto format(const MiMa::MicroProgramCodeList& codeList, FormatContext& ctx) {
 		if (codeList.head->upperConditionLimit == codeList.conditionMax) {
-			return fmt::format_to(ctx.out(), "{}", codeList.head->code);
+			return fmt::format_to(ctx.out(), "condition {} up to max 0x{:X}: {}", codeList.conditionName, codeList.conditionMax, codeList.head->code);
 		}
 
 

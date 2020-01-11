@@ -7,23 +7,33 @@ namespace MiMa {
 		upperConditionLimit(upperConditionLimit)
 	{}
 
+	MicroProgramCodeNode::~MicroProgramCodeNode() {
+		if (next != nullptr) delete next;
+	}
 
 
-	MicroProgramCodeList::MicroProgramCodeList(const size_t& conditionMax) :
+
+	MicroProgramCodeList::MicroProgramCodeList(const std::string& conditionName, const size_t& conditionMax) :
+		conditionName(conditionName),
 		conditionMax(conditionMax),
 		head(new MicroProgramCodeNode(conditionMax))
 	{}
 
 	MicroProgramCodeList::~MicroProgramCodeList() {
-		MicroProgramCodeNode* current = head;
-		MicroProgramCodeNode* next;
+		delete head;
+	}
 
-		while (current != nullptr) {
-			next = current->next;
-			delete current;
 
-			current = next;
-		}
+	void MicroProgramCodeList::reset() {
+		reset("", 0);
+	}
+
+	void MicroProgramCodeList::reset(const std::string& conditionName, const size_t& conditionMax) {
+		this->conditionName = conditionName;
+		this->conditionMax = conditionMax;
+
+		delete head;
+		head = new MicroProgramCodeNode(conditionMax);
 	}
 
 
@@ -88,10 +98,15 @@ namespace MiMa {
 		func(upperLimitNode->code);
 	}
 
-	MicroProgramCode MicroProgramCodeList::get(size_t condition) {
-		condition = std::min(condition, conditionMax);
-		MicroProgramCodeNode* current = head;
+	MicroProgramCode MicroProgramCodeList::get(const StatusBitMap& statusBits) {
+		StatusBitMap::const_iterator conditionLocation = statusBits.find(conditionName);
 
+		size_t condition = 0;
+		if (conditionLocation != statusBits.end()) {
+			condition = std::min(conditionLocation->second, conditionMax);
+		}
+
+		MicroProgramCodeNode* current = head;
 		while (current->upperConditionLimit < condition) {
 			current = current->next;
 		}

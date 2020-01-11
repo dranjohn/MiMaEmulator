@@ -248,14 +248,9 @@ namespace MiMa {
 			MIMA_LOG_TRACE("Setting automatic jump to next address 0x{:02X} for microprogram instruction {}", compiler.firstFree + 1, currentCode);
 			currentCode.apply(&MicroProgramCode::setJump, compiler.firstFree + 1, 0, 0xFF);
 		}
-
-		MIMA_LOG_TRACE("Compiled at 0x{:02X}: microcode {}", compiler.firstFree, currentCode);
-
 		fixedJump = false;
-		compiler.firstFree++;
-		MIMA_ASSERT_WARN(compiler.firstFree != 0, "Memory position overflow in compilation, continuing to compile at 0x00.");
 
-		compiler.lineStart = true;
+		endOfLine(currentCode);
 	}
 
 
@@ -267,7 +262,10 @@ namespace MiMa {
 	MicroProgramCompiler::DefaultCompileMode::DefaultCompileMode(MicroProgramCompiler& compiler) :
 		CompileMode(compiler),
 		operatorBuffer(std::string(""), [](const std::string&, const std::string&) { return NO_MICROPROGRAM_CODE_MODIFICATION; })
-	{}
+	{
+		compiler.memory[compiler.firstFree].reset();
+		MIMA_LOG_TRACE("Opened default compiler mode");
+	}
 
 
 	bool MicroProgramCompiler::DefaultCompileMode::isControl(const char& control) {
@@ -299,6 +297,7 @@ namespace MiMa {
 			//if the token is empty, the break operator stands for end-of-line
 			if (*token == 0) {
 				CompileMode::endOfLine(fixedJump, compiler.memory[compiler.firstFree]);
+				compiler.memory[compiler.firstFree].reset();
 				break;
 			}
 
@@ -328,7 +327,7 @@ namespace MiMa {
 
 
 	void MicroProgramCompiler::DefaultCompileMode::closeCompileMode() {
-		MIMA_LOG_TRACE("Closing default compiler mode");
+		MIMA_LOG_TRACE("Closed default compiler mode");
 	}
 
 	void MicroProgramCompiler::DefaultCompileMode::finish(char* remaining) {
@@ -342,9 +341,16 @@ namespace MiMa {
 	// Conditional jump compile mode of the microprogram compiler
 	// ----------------------------------------------------------
 
-	MicroProgramCompiler::ConditionalCompileMode::ConditionalCompileMode(MicroProgramCompiler& compiler) :
-		CompileMode(compiler)
-	{}
+	MicroProgramCompiler::ConditionalCompileMode::ConditionalCompileMode(MicroProgramCompiler& compiler, const std::string& conditionName, const size_t& conditionMax) :
+		CompileMode(compiler),
+		conditionName(conditionName),
+		conditionMax(conditionMax),
+		lowerLimit(0),
+		upperLimit(conditionMax)
+	{
+		compiler.memory[compiler.firstFree].reset(conditionName, conditionMax);
+		MIMA_LOG_TRACE("Opened conditional jump compiler mode for condition '{}' up to 0x{:X}", conditionName, conditionMax);
+	}
 
 
 	bool MicroProgramCompiler::ConditionalCompileMode::isControl(const char& control) {
@@ -370,6 +376,7 @@ namespace MiMa {
 			//if the token is empty, the break operator stands for end-of-line
 			if (*token == 0) {
 				CompileMode::endOfLine(compiler.memory[compiler.firstFree]);
+				compiler.memory[compiler.firstFree].reset(conditionName, conditionMax);
 				break;
 			}
 
@@ -378,7 +385,7 @@ namespace MiMa {
 				CompileMode::addJump(token, compiler.memory[compiler.firstFree], lowerLimit, upperLimit);
 
 				lowerLimit = 0;
-				upperLimit = MAX_UPPER_LIMIT;
+				upperLimit = conditionMax;
 				break;
 			}
 
@@ -387,7 +394,7 @@ namespace MiMa {
 				MIMA_LOG_INFO("Added jump to instruction {:02X} in range from {} to {}", compiler.firstFree + 1, lowerLimit, upperLimit);
 
 				lowerLimit = 0;
-				upperLimit = MAX_UPPER_LIMIT;
+				upperLimit = conditionMax;
 				break;
 			}
 
@@ -400,7 +407,7 @@ namespace MiMa {
 
 
 	void MicroProgramCompiler::ConditionalCompileMode::closeCompileMode() {
-		MIMA_LOG_TRACE("Closing conditional compiler mode");
+		MIMA_LOG_TRACE("Closed conditional compiler mode");
 	}
 
 	void MicroProgramCompiler::ConditionalCompileMode::finish(char* remaining) {
@@ -456,9 +463,14 @@ namespace MiMa {
 			}
 
 			if (func == "cm") {
-				if (arguments.size() == 1 && arguments[0] == "default") {
+				if (arguments[0] == "default") {
+					if (arguments.size() != 1) {
+						MIMA_LOG_ERROR("Expected one argument for compiler directive function {}, found {}", func, arguments.size());
+						return;
+					}
+
 					if (!lineStart) {
-						MIMA_LOG_ERROR("Discarding invalid compiler directive 'cm(default)!' which is not a line start");
+						MIMA_LOG_ERROR("Discarding invalid compiler directive '{}' which is not a line start", directive);
 						return;
 					}
 
@@ -469,19 +481,27 @@ namespace MiMa {
 					return;
 				}
 
-				if (arguments.size() == 1 && arguments[0] == "conditional") {
+				if (arguments[0] == "conditional") {
+					if (arguments.size() != 3) {
+						MIMA_LOG_ERROR("Expected three arguments for compiler directive function {}, found {}", func, arguments.size());
+						return;
+					}
+
 					if (!lineStart) {
-						MIMA_LOG_ERROR("Discarding invalid compiler directive 'cm(conditional)!' which is not a line start");
+						MIMA_LOG_ERROR("Discarding invalid compiler directive '{}' which is not a line start", directive);
 						return;
 					}
 
 					currentCompileMode->closeCompileMode();
-					currentCompileMode.reset(new ConditionalCompileMode(*this));
+					currentCompileMode.reset(new ConditionalCompileMode(*this, arguments[1], std::stoi(arguments[2])));
 
 					MIMA_LOG_TRACE("Switched to a conditional decode compiler compile mode");
 					return;
 				}
 			}
+
+			MIMA_LOG_ERROR("Expected at least one argument for compiler directive function {}", func);
+			return;
 		}
 
 		MIMA_LOG_ERROR("Discarding unknwon compiler directive '{}!'", directive);
