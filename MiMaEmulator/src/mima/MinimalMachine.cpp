@@ -39,6 +39,7 @@ namespace MiMa {
 		//get microcode for current register transfer
 		StatusBitMap statusBits;
 		statusBits.insert({ "op_code", instructionRegister.opCode.value });
+		statusBits.insert({ "accumulator_negative", accumulator.negative.value });
 		MicroProgramCode microCode = instructionDecoder.getMicroCode(instructionDecoderState, statusBits);
 
 		MIMA_LOG_TRACE("Found microprogram instruction {}", microCode);

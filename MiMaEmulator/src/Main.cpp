@@ -76,13 +76,13 @@ int main() {
 		
 		"jmp: IR > IAR; #start;;\n\n"
 		
-		//jmn not working yet
-		//"cm(conditional, accu_negative, 1)!\n"
-		//"jmn:\n"
-		//"0= #start;\n"
-		//"1= #jmp;\n"
-		//";\n\n"
+		"jmn:;;\n"
+		"cm(conditional, accumulator_negative, 1)!\n"
+		"0= #start;\n"
+		"1= #jmp;\n"
+		";\n\n"
 
+		"cm(default)!"
 		"not: IR > SAR; R = 1;;\n"
 		"ACCU > X; R = 1;;\n"
 		"R = 1;;\n"
