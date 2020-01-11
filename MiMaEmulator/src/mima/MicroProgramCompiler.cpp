@@ -447,8 +447,19 @@ namespace MiMa {
 
 		//otherwise, execute compiler directive
 		std::string directive(token);
+		
+		//a compiler directive starting with "//" is a comment
+		if (directive.rfind("//", 0) == 0) {
+			MIMA_LOG_INFO("Discarding comment '{}'", directive);
+			return;
+		}
+
+		//if the compiler directive is not a comment, it is a function
+		//use regex to match the function name and parameters
 		std::smatch matches;
 
+		//functions are structured like in C++:
+		//function_name(param_0, param_1, ..., param_n)
 		std::regex funcRegex(R"((?:(.*)\((.*)\)))");
 		std::regex paramRegex(R"((.+?)(?:$|,)\s*)");
 
@@ -462,6 +473,7 @@ namespace MiMa {
 				parameters = matches.suffix();
 			}
 
+			//compile mode function
 			if (func == "cm") {
 				if (arguments[0] == "default") {
 					if (arguments.size() != 1) {
