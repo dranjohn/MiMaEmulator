@@ -4,13 +4,12 @@
 
 #include "mima/microprogram/MicroProgram.h"
 #include "mima/microprogram/MicroProgramCompiler.h"
+#include "mima/mimaprogram/MiMaMemoryCompiler.h"
 #include "mima/MinimalMachine.h"
 #include "debug/Log.h"
 
 
 int main() {
-	std::unique_ptr<MiMa::MemoryCell[]> memory = std::make_unique<MiMa::MemoryCell[]>(MiMa::MinimalMachine::MEMORY_CAPACITY);
-
 	char* instructionDecoderCode =
 		"//fetch phase!\n"
 		"start: IAR > SAR; IAR > X; R = 1;;\n"
@@ -114,22 +113,27 @@ int main() {
 		"R = 1;;\n"
 		"SDR > Y; ALU = RAR; #ret;;\n\n";
 
-
 	//create instruction decoder from given code
 	MiMa::MicroProgram instructionDecoder = MiMa::MicroProgramCompiler::compile(instructionDecoderCode);
 	
 	//write mima program into its memory
-	memory[0x00] = { 0x0000FF };
-	memory[0x01] = { 0x300020 };
-	memory[0x02] = { 0xF00000 };
-	memory[0x20] = { 0x000003 };
+	char* programCode =
+		"* = 0\n"
+		"LDC $FF\n"
+		"ADD $20\n"
+		"HALT\n"
+		"* = $20\n"
+		"DS 3\n";
+	MiMa::MemoryCell* memory = MiMa::MiMaMemoryCompiler::compile(programCode);
 
 	//run the mima
-	MiMa::MinimalMachine mima(instructionDecoder, memory.get());
+	MiMa::MinimalMachine mima(instructionDecoder, memory);
 	mima.printState();
 
 	mima.emulateLifeTime();
 	mima.printState();
+
+	delete[] memory;
 
 	return 0;
 }

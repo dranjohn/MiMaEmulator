@@ -98,6 +98,7 @@
     <ClInclude Include="src\mima\microprogram\MicroProgram.h" />
     <ClInclude Include="src\mima\microprogram\MicroProgramCompiler.h" />
     <ClInclude Include="src\mima\microprogram\StatusBit.h" />
+    <ClInclude Include="src\mima\mimaprogram\MiMaMemoryCompiler.h" />
     <ClInclude Include="src\mima\MinimalMachine.h" />
     <ClInclude Include="src\util\BinaryOperatorBuffer.h" />
     <ClInclude Include="src\util\BitField.h" />
@@ -111,6 +112,7 @@
     <ClCompile Include="src\debug\LogFormat.cpp" />
     <ClCompile Include="src\mima\microprogram\MicroProgram.cpp" />
     <ClCompile Include="src\mima\microprogram\MicroProgramCompiler.cpp" />
+    <ClCompile Include="src\mima\mimaprogram\MiMaMemoryCompiler.cpp" />
     <ClCompile Include="src\mima\MinimalMachine.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

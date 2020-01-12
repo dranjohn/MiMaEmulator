@@ -39,6 +39,7 @@
     <ClInclude Include="src\mima\microprogram\StatusBit.h" />
     <ClInclude Include="src\mima\microprogram\MicroProgram.h" />
     <ClInclude Include="src\mima\microprogram\MicroProgramCompiler.h" />
+    <ClInclude Include="src\mima\mimaprogram\MiMaMemoryCompiler.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Main.cpp" />
@@ -53,5 +54,6 @@
     </ClCompile>
     <ClCompile Include="src\mima\microprogram\MicroProgram.cpp" />
     <ClCompile Include="src\mima\microprogram\MicroProgramCompiler.cpp" />
+    <ClCompile Include="src\mima\mimaprogram\MiMaMemoryCompiler.cpp" />
   </ItemGroup>
 </Project>

@@ -93,6 +93,7 @@ namespace MiMa {
 
 		//line tracking
 		bool lineStart = true;
+
 	public:
 		MicroProgramCompiler();
 
