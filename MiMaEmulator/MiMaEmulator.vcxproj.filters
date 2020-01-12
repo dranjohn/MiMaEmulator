@@ -55,5 +55,6 @@
     <ClCompile Include="src\mima\microprogram\MicroProgram.cpp" />
     <ClCompile Include="src\mima\microprogram\MicroProgramCompiler.cpp" />
     <ClCompile Include="src\mima\mimaprogram\MiMaMemoryCompiler.cpp" />
+    <ClCompile Include="src\mima\mimaprogram\MiMaMemory.h" />
   </ItemGroup>
 </Project>

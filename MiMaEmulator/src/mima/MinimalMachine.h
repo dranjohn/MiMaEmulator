@@ -7,16 +7,9 @@
 #include "util/MinType.h"
 #include "util/Bitfield.h"
 #include "debug/Log.h"
+#include "mimaprogram/MiMaMemory.h"
 
 namespace MiMa {
-	struct MemoryCell {
-		uint32_t data : 24;
-		uint32_t debug : 8;
-
-		MemoryCell() : data(0), debug(0) {}
-		MemoryCell(uint32_t dataValue) : data(dataValue), debug(0) {}
-	};
-
 	struct MemoryState {
 		uint32_t address : 20;
 		uint32_t access : 1;
@@ -30,7 +23,6 @@ namespace MiMa {
 		static const size_t DATA_SIZE = 24;
 		static const size_t ADDRESS_SIZE = 20;
 		static const size_t OP_CODE_SIZE = 8;
-		static const size_t MEMORY_CAPACITY = 0xFFFFF;
 
 		typedef typename MinType<DATA_SIZE>::type Data;
 		typedef typename MinType<ADDRESS_SIZE>::type Address;

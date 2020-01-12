@@ -1,6 +1,6 @@
 #include "MicroProgramCompiler.h"
 
-#include <regex>
+#include <sstream>
 
 #include "StatusBit.h"
 
@@ -34,16 +34,6 @@ namespace MiMa {
 	}
 
 	//Utility: control symbols
-	constexpr char char_LABEL = ':';
-	constexpr char char_JUMP = '#';
-	constexpr char char_REGISTER_TRANSFER = '>';
-	constexpr char char_SET = '=';
-
-	constexpr char char_RANGE_LOWER_LIMIT = '+';
-	constexpr char char_RANGE_UPPER_LIMIT = '-';
-	constexpr char char_RANGE_POINT = '=';
-
-	constexpr char char_BREAK = ';';
 	constexpr char char_COMPILER_DIRECTIVE = '!';
 
 	//Utility: ALU codes
@@ -159,6 +149,13 @@ namespace MiMa {
 	// Compile mode utility functions
 	// ------------------------------
 
+	// --- Constants definitions
+
+	const std::regex MicroProgramCompiler::CompileMode::emptyLinePattern("\s*");
+
+
+	// --- Functions ---
+
 	void MicroProgramCompiler::CompileMode::addLabel(std::string label) {
 		MIMA_LOG_TRACE("Found label '{}' at address 0x{:02X}", label, compiler.firstFree);
 
@@ -256,9 +253,6 @@ namespace MiMa {
 		compiler.firstFree++;
 		compiler.firstFree %= 0x100;
 		MIMA_ASSERT_WARN(compiler.firstFree != 0, "Memory position overflow in compilation, continuing to compile at 0x00.");
-
-		//the compiler is now again at a line start
-		compiler.lineStart = true;
 	}
 
 	void MicroProgramCompiler::CompileMode::endOfLine(bool& fixedJump, MicroProgramCodeList& currentCode) {
@@ -276,12 +270,9 @@ namespace MiMa {
 	}
 
 
-	void MicroProgramCompiler::CompileMode::finish(char* remaining) {
+	void MicroProgramCompiler::CompileMode::finish() {
 		//close compiler mode
 		closeCompileMode();
-
-		//assert that there no trailing characters, the last character in the code should be a control token (only followed by whitespaces)
-		MIMA_ASSERT_ERROR(*remaining == 0, "Found trailing tokens {} after finishing compilation", remaining);
 	}
 
 
@@ -289,6 +280,18 @@ namespace MiMa {
 	// ----------------------------------------------------------
 	// Default (global) compile mode of the microprogram compiler
 	// ----------------------------------------------------------
+
+	// --- Constants definitions ---
+
+	const std::regex MicroProgramCompiler::DefaultCompileMode::labelMatcher(R"(\s*(.*?)\:(.*))");
+	const std::regex MicroProgramCompiler::DefaultCompileMode::instructionMatcher(R"((.*?);)");
+
+	const std::regex MicroProgramCompiler::DefaultCompileMode::registerTransferMatcher(R"(\s*(.*?)\s*\->\s*(.*?)\s*)");
+	const std::regex MicroProgramCompiler::DefaultCompileMode::assignmentMatcher(R"(\s*(.*?)\s*\=\s*(.*?)\s*)");
+	const std::regex MicroProgramCompiler::DefaultCompileMode::jumpMatcher(R"(\s*#(.*?)\s*)");
+
+
+	// --- Functions ---
 	
 	MicroProgramCompiler::DefaultCompileMode::DefaultCompileMode(MicroProgramCompiler& compiler) :
 		CompileMode(compiler),
@@ -300,73 +303,86 @@ namespace MiMa {
 		MIMA_LOG_TRACE("Opened default compiler mode");
 	}
 
+	bool MicroProgramCompiler::DefaultCompileMode::addLine(const std::string& line) {
+		std::string codeLine = line;
+		std::smatch matches;
 
-	bool MicroProgramCompiler::DefaultCompileMode::isControl(const char& control) {
-		//in default compile:
-		return control == char_LABEL // labels can be added
-			|| control == char_REGISTER_TRANSFER // register transfers can be added
-			|| control == char_SET // booleans can be set
-			|| control == char_BREAK; // break character for controlling code structure
-	}
+		if (std::regex_match(codeLine, matches, labelMatcher)) {
+			CompileMode::addLabel(matches[1]);
+			codeLine = matches[2];
+		}
 
-	void MicroProgramCompiler::DefaultCompileMode::addToken(const char& control, char* token) {
-		switch (control) {
-		case char_LABEL:
-			CompileMode::addLabel(token);
-			break;
+		std::sregex_iterator instructionsStart(codeLine.begin(), codeLine.end(), instructionMatcher);
+		std::sregex_iterator instructionsEnd;
 
-		case char_REGISTER_TRANSFER:
-			//prepare for second operand of move instruction in next addToken() call
-			operatorBuffer.buffer(token, MOVE_OPERATOR);
-			compiler.lineStart = false;
-			break;
+		for (std::sregex_iterator i = instructionsStart; i != instructionsEnd; ++i) {
+			std::string instruction = (*i)[1];
 
-		case char_SET:
-			//prepare for second operand of set instruction in next addToken() call
-			operatorBuffer.buffer(token, SET_OPERATOR);
-			compiler.lineStart = false;
-			break;
-
-		case char_BREAK:
-			//if the token is empty, the break operator stands for end-of-line
-			if (*token == 0) {
-				CompileMode::endOfLine(fixedJump, compiler.memory[compiler.firstFree]);
-				compiler.memory[compiler.firstFree].reset();
-				break;
+			if (std::regex_match(instruction, emptyLinePattern)) {
+				continue;
 			}
 
-			//if the token starts with the jump symbol, treat it as a jump instruction
-			if (*token == char_JUMP) {
-				if (operatorBuffer.isBufferOccupied()) {
-					MIMA_LOG_INFO("Discarding binary operator followed by jump instruction to {}", token);
-					operatorBuffer.discardBuffer();
+			if (std::regex_match(instruction, matches, registerTransferMatcher)) {
+				//get the read and write functions for the microprogram code modification
+				MicroProgramCodeSetFunction setWrite = getWriteBit(matches[1]);
+				MicroProgramCodeSetFunction setRead = getReadBit(matches[2]);
+
+				//create a modifier executing both these functions
+				MicroProgramCodeModifier registerTransfer = [setWrite, setRead](MicroProgramCode& microProgramCode) {
+					(microProgramCode.*setWrite)();
+					(microProgramCode.*setRead)();
+				};
+
+				compiler.memory[compiler.firstFree].apply(registerTransfer);
+
+				continue;
+			}
+
+			if (std::regex_match(instruction, matches, assignmentMatcher)) {
+				//the left operand "R" marks that storage read is being (un)set
+				if (matches[1] == "R") {
+					if (matches[2] == "1") {
+						compiler.memory[compiler.firstFree].apply(&MicroProgramCode::enableMemoryRead);
+					}
+					if (matches[2] == "0") {
+						compiler.memory[compiler.firstFree].apply(&MicroProgramCode::disableMemoryRead);
+					}
 				}
 
-				CompileMode::addJump(token + 1, fixedJump, compiler.memory[compiler.firstFree]);
-				compiler.lineStart = false;
-				break;
+				//the left operand "R" marks that storage write is being (un)set
+				if (matches[1] == "W") {
+					if (matches[2] == "1") {
+						compiler.memory[compiler.firstFree].apply(&MicroProgramCode::enableMemoryWrite);
+					}
+					if (matches[2] == "0") {
+						compiler.memory[compiler.firstFree].apply(&MicroProgramCode::disableMemoryWrite);
+					}
+				}
+
+				//the left operand "ALU" marks that an ALU code (in [0, 7]) is being set
+				if (matches[1] == "ALU") {
+					compiler.memory[compiler.firstFree].apply(&MicroProgramCode::setALUCode, getALUCode(matches[2]));
+				}
+
+				continue;
 			}
 
-			MIMA_ASSERT_WARN(operatorBuffer.isBufferOccupied(), "Found token '{}' with no preceeding binary operator", token);
-			if (operatorBuffer.isBufferOccupied()) {
-				//execute binary operation
-				compiler.memory[compiler.firstFree].apply(operatorBuffer.apply(token), 0, 0xFF);
+			if (std::regex_match(instruction, matches, jumpMatcher)) {
+				CompileMode::addJump(matches[1], fixedJump, compiler.memory[compiler.firstFree]);
+				continue;
 			}
-			break;
-		default:
-			MIMA_LOG_ERROR("Found unknown control symbol '{}'", control);
-			break;
+
+			//unknown instruction
+			MIMA_LOG_ERROR("Found unknown instruction '{}'", instruction);
+			return false;
 		}
+
+		CompileMode::endOfLine(fixedJump, compiler.memory[compiler.firstFree]);
+		return true;
 	}
 
 
 	void MicroProgramCompiler::DefaultCompileMode::closeCompileMode() {
-		//ensure the last line has been closed properly
-		if (!compiler.lineStart) {
-			compiler.memory[compiler.firstFree].reset();
-			MIMA_LOG_ERROR("Unfinished microprogram code line at 0x{:02X} has been reset", compiler.firstFree);
-		}
-
 		//ensure there is nothing remaining in the binary operator buffer
 		MIMA_ASSERT_ERROR(!operatorBuffer.isBufferOccupied(), "Binary operator remaining after finishing compilation with remaining operand");
 
@@ -381,87 +397,44 @@ namespace MiMa {
 	// Conditional jump compile mode of the microprogram compiler
 	// ----------------------------------------------------------
 
+	// --- Constants definitions ---
+
+	const std::regex MicroProgramCompiler::ConditionalCompileMode::conditionalJumpMatcher(R"(\s*\[\s*(.*?)\s*\,\s*(.*?)\s*\]\s*#(.*?)\s*(;?)\s*)");
+
+
+	// --- Functions ---
+
 	MicroProgramCompiler::ConditionalCompileMode::ConditionalCompileMode(MicroProgramCompiler& compiler, const std::string& conditionName, const size_t& conditionMax) :
 		CompileMode(compiler),
 		conditionName(conditionName),
-		conditionMax(conditionMax),
-		lowerLimit(0),
-		upperLimit(conditionMax)
+		conditionMax(conditionMax)
 	{
 		compiler.memory[compiler.firstFree].reset(conditionName, conditionMax);
 		MIMA_LOG_TRACE("Opened conditional jump compiler mode for condition '{}' up to 0x{:X}", conditionName, conditionMax);
 	}
 
 
-	bool MicroProgramCompiler::ConditionalCompileMode::isControl(const char& control) {
-		//in default compile:
-		return control == char_RANGE_LOWER_LIMIT // the lower condition limit of an instruction can be set
-			|| control == char_RANGE_UPPER_LIMIT // the upper condition limit of an instruction can be set
-			|| control == char_RANGE_POINT  // the lower and upper condition limit of an instruction can be set in one command
-			|| control == char_BREAK; // break character for controlling code structure
-	}
+	bool MicroProgramCompiler::ConditionalCompileMode::addLine(const std::string& line) {
+		std::smatch matches;
 
-	void MicroProgramCompiler::ConditionalCompileMode::addToken(const char& control, char* token) {
-		switch (control) {
-			//limit setting
-		case char_RANGE_LOWER_LIMIT:
-			lowerLimit = std::stoi(token);
-			break;
-		case char_RANGE_UPPER_LIMIT:
-			upperLimit = std::stoi(token);
-			break;
-		case char_RANGE_POINT:
-			lowerLimit = std::stoi(token);
-			upperLimit = std::stoi(token);
-			break;
-
-		case char_BREAK:
-			//if the token is empty, the break operator stands for end-of-line
-			if (*token == 0) {
-				CompileMode::endOfLine(compiler.memory[compiler.firstFree]);
-				compiler.memory[compiler.firstFree].reset(conditionName, conditionMax);
-				break;
-			}
-
-			//if the token starts with a #, it's a jump instruction
-			if (*token == '#') {
-				token++;
-				CompileMode::addJump(token, compiler.memory[compiler.firstFree], lowerLimit, upperLimit);
-
-				lowerLimit = 0;
-				upperLimit = conditionMax;
-				break;
-			}
-
-			//if the token is "next", the jump is supposed to go to the next instruction
-			if (std::string(token) == "next") {
-				compiler.memory[compiler.firstFree].apply(&MicroProgramCode::setJump, compiler.firstFree + 1, lowerLimit, upperLimit);
-				MIMA_LOG_INFO("Added jump to instruction {:02X} in range from {} to {}", compiler.firstFree + 1, lowerLimit, upperLimit);
-
-				lowerLimit = 0;
-				upperLimit = conditionMax;
-				break;
-			}
-
-			MIMA_LOG_ERROR("Invalid jump instruction to '{}' in conditional compiling mode", token);
-			break;
-
-		default:
-			MIMA_LOG_ERROR("Found unknown control symbol '{}'", control);
-			break;
+		if (!std::regex_match(line, matches, conditionalJumpMatcher)) {
+			return false;
 		}
+
+		const size_t lowerLimit = std::stoi(matches[1]);
+		const size_t upperLimit = (matches[2] == "max") ? conditionMax : std::stoi(matches[2]);
+
+		CompileMode::addJump(matches[3], compiler.memory[compiler.firstFree], lowerLimit, upperLimit);
+
+		if (matches[4] == ";") {
+			CompileMode::endOfLine(compiler.memory[compiler.firstFree]);
+		}
+		return true;
 	}
 
 
 	void MicroProgramCompiler::ConditionalCompileMode::closeCompileMode() {
-		//ensure the last line has been closed properly
-		if (!compiler.lineStart) {
-			compiler.memory[compiler.firstFree].reset();
-			MIMA_LOG_ERROR("Unfinished microprogram code line at 0x{:02X} has been reset", compiler.firstFree);
-		}
-
-
-		//log closing of the default compiler mode
+		//log closing of the conditional compiler mode
 		MIMA_LOG_TRACE("Closed conditional compiler mode");
 	}
 
@@ -470,6 +443,15 @@ namespace MiMa {
 	// ---------------------
 	// Microprogram compiler
 	// ---------------------
+
+	// --- Constants definitions ---
+
+	const std::regex MicroProgramCompiler::compilerDirectivePattern(R"(\s*\!(.*))");
+	const std::regex MicroProgramCompiler::compilerDirectiveFunctionMatcher(R"((?:(.*)\((.*)\)))");
+	const std::regex MicroProgramCompiler::compilerDirectiveParameterMatcher(R"((.+?)(?:$|,)\s*)");
+
+
+	// --- Functions ---
 
 	MicroProgramCompiler::MicroProgramCompiler() : memory(new MicroProgramCodeList[0x100]) {
 		currentCompileMode.reset(new DefaultCompileMode(*this));
@@ -482,50 +464,20 @@ namespace MiMa {
 	};
 
 
-	bool MicroProgramCompiler::isControl(const char& control) {
-		//check if a char is a control character usable for addToken()
-		return control == char_COMPILER_DIRECTIVE
-			|| currentCompileMode->isControl(control);
-	}
-
-	void MicroProgramCompiler::addToken(const char& control, char* token) {
-		//if the control char is not a compiler directive indicator, pass it to the current compile mode
-		if (control != char_COMPILER_DIRECTIVE) {
-			currentCompileMode->addToken(control, token);
-			return;
-		}
-
-
-		//otherwise, execute compiler directive
-		if (!lineStart) {
-			MIMA_LOG_ERROR("Discarding invalid compiler directive '{}' which is not a line start", token);
-			return;
-		}
-		std::string directive(token);
-		
-		//a compiler directive starting with "//" is a comment
-		if (directive.rfind("//", 0) == 0) {
-			MIMA_LOG_TRACE("Discarding comment '{}'", directive);
-			return;
-		}
-
-		//if the compiler directive is not a comment, it is a function
-		//use regex to match the function name and parameters
+	void MicroProgramCompiler::addDirective(const std::string& directive) {
 		std::smatch matches;
 
-		//functions are structured like in C++:
-		//function_name(param_0, param_1, ..., param_n)
-		std::regex funcRegex(R"((?:(.*)\((.*)\)))");
-		std::regex paramRegex(R"((.+?)(?:$|,)\s*)");
-
-		if (std::regex_match(directive, matches, funcRegex)) {
+		if (std::regex_match(directive, matches, compilerDirectiveFunctionMatcher)) {
+			//extract function name
 			std::string func = matches[1];
+
+			//extract arguments
 			std::vector<std::string> arguments;
 
-			std::string parameters = matches[2];
-			while (std::regex_search(parameters, matches, paramRegex)) {
+			std::string argumentList = matches[2];
+			while (std::regex_search(argumentList, matches, compilerDirectiveParameterMatcher)) {
 				arguments.push_back(matches[1]);
-				parameters = matches.suffix();
+				argumentList = matches.suffix();
 			}
 
 			//compile mode function
@@ -581,9 +533,33 @@ namespace MiMa {
 		MIMA_LOG_ERROR("Discarding unknwon compiler directive '{}!'", directive);
 	}
 
+	void MicroProgramCompiler::addLine(const std::string& line) {
+		//remove comment at the start of the line
+		std::string codeLine = line.substr(0, line.find("//"));
 
-	MicroProgram MicroProgramCompiler::finish(char* remaining) {
-		currentCompileMode->finish(remaining);
+		//don't add empty lines
+		if (std::regex_match(codeLine, CompileMode::emptyLinePattern)) {
+			return;
+		}
+
+		//if the line starts with a compiler directive symbol, treat it as such
+		std::smatch matches;
+		if (std::regex_match(codeLine, matches, MicroProgramCompiler::compilerDirectivePattern)) {
+			addDirective(matches[1]);
+			return;
+		}
+		
+		//otherwise, pass it on to the current compile mode
+		currentCompileMode->addLine(line);
+	}
+
+
+	MicroProgram MicroProgramCompiler::finish() {
+		currentCompileMode->finish();
+
+		for (auto unresolvedListener = labelAddListeners.begin(); unresolvedListener != labelAddListeners.end(); ++unresolvedListener) {
+			MIMA_LOG_WARN("Found label listener for {} after finishing compilation", unresolvedListener->first);
+		}
 
 		//create microprogram
 		MIMA_LOG_INFO("Finished microprogram compilation at 0x{:02X}", firstFree);
@@ -602,66 +578,14 @@ namespace MiMa {
 	MicroProgram MicroProgramCompiler::compile(char* microProgramCode) {
 		MIMA_LOG_INFO("Compiling microprogram from given code string");
 
-		BufferedCharStream microProgramCodeStream(microProgramCode);
-		return compile(microProgramCodeStream);
-	}
-
-	//Interface: read input from an inputstream providing the code for the program.
-	MicroProgram MicroProgramCompiler::compile(std::istream& microProgramCode) {
-		MIMA_LOG_INFO("Starting microprogram compilation");
-
-		InputCharStream microProgramCodeStream(microProgramCode);
-		return compile(microProgramCodeStream);
-	}
-
-
-	//Interface: read input from a file containing the code for the program.
-	MicroProgram MicroProgramCompiler::compileFile(const char*& fileName) {
-		std::ifstream file;
-		file.open(fileName);
-
-		MicroProgram program = compile(file);
-
-		file.close();
-		return program;
-	}
-
-
-	MicroProgram MicroProgramCompiler::compile(CharStream& microProgramCodeStream) {
-		//initialize token buffer
-		std::vector<char> tokenBuffer;
-
-		//initialize micro code builder
 		MicroProgramCompiler compiler;
-		char input;
 
-		//check for control token
-		while (input = microProgramCodeStream.get()) {
-			if (isspace(input)) {
-				continue;
-			}
-
-			//control character terminate tokens
-			if (compiler.isControl(input)) {
-				tokenBuffer.push_back(0);
-
-				MIMA_LOG_TRACE("Found microprogram token: '{}'", tokenBuffer.data());
-				MIMA_LOG_TRACE("Found microprogram control character: '{}'", input);
-
-				compiler.addToken(input, tokenBuffer.data());
-
-				tokenBuffer.clear();
-				continue;
-			}
-
-			//token not terminated, add current character to the token
-			tokenBuffer.push_back(input);
+		std::istringstream microProgramCodeStream(microProgramCode);
+		std::string codeLine;
+		while (std::getline(microProgramCodeStream, codeLine)) {
+			compiler.addLine(codeLine);
 		}
 
-		//add final token
-		tokenBuffer.push_back(0);
-		MicroProgram program = compiler.finish(tokenBuffer.data());
-
-		return program;
+		return compiler.finish();
 	}
 }

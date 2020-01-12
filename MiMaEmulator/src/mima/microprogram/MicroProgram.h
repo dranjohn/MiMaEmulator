@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cctype>
 #include <cstdint>
 #include <memory>
 #include <algorithm>
@@ -10,6 +11,7 @@
 
 #include "util/CharStream.h"
 #include "StatusBit.h"
+#include "mima/mimaprogram/MiMaMemory.h"
 
 #include "debug/Log.h"
 
@@ -115,12 +117,16 @@ namespace MiMa {
 		void reset(const std::string& conditionName, const size_t& conditionMax);
 
 
+		inline void apply(const std::function<void(MicroProgramCode&)>& func) { apply(func, 0, conditionMax); }
 		void apply(const std::function<void(MicroProgramCode&)>& func, const size_t& lowerLimit, size_t upperLimit);
 
 		inline void apply(const MicroProgramCodeSetFunction& func, const size_t& lowerLimit, size_t upperLimit) {
 			apply([func](MicroProgramCode& microProgramCode) { std::invoke(func, microProgramCode); }, lowerLimit, upperLimit);
 		}
 
+		inline void apply(const MicroProgramCodeSet8BitFunction& func, const uint8_t& value) {
+			apply([func, value](MicroProgramCode& microProgramCode) { std::invoke(std::bind(func, std::placeholders::_1, value), microProgramCode); }, 0, conditionMax);
+		}
 		inline void apply(const MicroProgramCodeSet8BitFunction& func, const uint8_t& value, const size_t& lowerLimit, const size_t& upperLimit) {
 			apply([func, value](MicroProgramCode& microProgramCode) { std::invoke(std::bind(func, std::placeholders::_1, value), microProgramCode); }, lowerLimit, upperLimit);
 		}
@@ -139,6 +145,8 @@ namespace MiMa {
 	// ------------------------------------------------
 
 	class MicroProgram {
+		friend struct fmt::formatter<MiMa::MicroProgram>;
+
 	private:
 		//minimal machine microprogram read-only memory
 		std::shared_ptr<MicroProgramCodeList[]> memory;
@@ -148,6 +156,8 @@ namespace MiMa {
 		inline const MicroProgramCode getMicroCode(const uint8_t& memoryAddress, const StatusBitMap& statusBits) const { return memory[memoryAddress].get(statusBits); }
 	};
 }
+
+
 
 //microprogramm code fmt formatting definition
 template<>
@@ -164,6 +174,10 @@ struct fmt::formatter<MiMa::MicroProgramCodeList> {
 
 	template<typename FormatContext>
 	auto format(const MiMa::MicroProgramCodeList& codeList, FormatContext& ctx) {
+		if (codeList.conditionMax == 0) {
+			return fmt::format_to(ctx.out(), "Unconditional microcode: {}", codeList.head->code);
+		}
+
 		//if the microprogram code list has only one element, print it in one line
 		if (codeList.head->upperConditionLimit == codeList.conditionMax) {
 			return fmt::format_to(ctx.out(), "Conditional microcode for {} up to max 0x{:X}: {}", codeList.conditionName, codeList.conditionMax, codeList.head->code);
@@ -180,6 +194,77 @@ struct fmt::formatter<MiMa::MicroProgramCodeList> {
 			listOutput = fmt::format(listOutput, node);
 
 			current = current->next;
+		}
+
+		return fmt::format_to(ctx.out(), listOutput, "");
+	}
+};
+
+
+template<>
+struct fmt::formatter<MiMa::MicroProgram> {
+private:
+	size_t lowerLimit = 0;
+	size_t upperLimit = 0x100;
+
+	static const size_t char_0 = '0';
+
+public:
+	constexpr auto parse(format_parse_context& ctx) {
+		auto it = ctx.begin();
+		auto end = ctx.end();
+
+		if (it == end && *it == '}') {
+			return it;
+		}
+
+		lowerLimit = 0;
+		while (*it != ',') {
+			if (it == end || *it == '}') {
+				throw format_error("Expected a ',' somewhere in the range declaration");
+			}
+
+			if (!isdigit(*it)) {
+				throw format_error(fmt::format("Only digits [0-9] are allowed for range declarations, found {}", *it));
+			}
+
+			lowerLimit *= 10;
+			lowerLimit += *it - char_0;
+
+			++it;
+		}
+		++it;
+
+		upperLimit = 0;
+		while (it != end && *it != '}') {
+			if (!isdigit(*it)) {
+				throw format_error(fmt::format("Only digits [0-9] are allowed for range declarations, found {}", *it));
+			}
+
+			upperLimit *= 10;
+			upperLimit += *it - char_0;
+
+			++it;
+		}
+
+		return it;
+	}
+
+	template<typename FormatContext>
+	auto format(const MiMa::MicroProgram& program, FormatContext& ctx) {
+		if (lowerLimit >= upperLimit) {
+			return fmt::format_to(ctx.out(), "");
+		}
+
+		if (lowerLimit + 1 == upperLimit) {
+			return fmt::format_to(ctx.out(), "at 0x{:X}: {}", lowerLimit, program.memory[lowerLimit]);
+		}
+
+		std::string listOutput = "\n{}";
+		std::string nodeFormat = "at 0x{:X}: {}\n{{}}";
+		for (size_t i = lowerLimit; i < upperLimit; ++i) {
+			std::string node = fmt::format(nodeFormat, i, program.memory[i]);
+			listOutput = fmt::format(listOutput, node);
 		}
 
 		return fmt::format_to(ctx.out(), listOutput, "");

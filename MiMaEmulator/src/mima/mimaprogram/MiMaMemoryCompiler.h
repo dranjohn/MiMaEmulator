@@ -8,16 +8,16 @@
 namespace MiMa {
 	class MiMaMemoryCompiler {
 	private:
-		const static std::regex assignmentMatcher;
-		const static std::regex instructionMatcher;
+		static const std::regex assignmentMatcher;
+		static const std::regex instructionMatcher;
 
-		const static std::regex identifiers;
-		const static std::regex decNumber;
-		const static std::regex hexNumber;
+		static const std::regex identifiers;
+		static const std::regex decNumber;
+		static const std::regex hexNumber;
 
 	private:
 		uint32_t compilationAddress = 0;
-		MemoryCell* mimaMemory = new MemoryCell[MinimalMachine::MEMORY_CAPACITY];
+		MemoryCell* mimaMemory = new MemoryCell[MEMORY_CAPACITY];
 
 	private:
 		bool addFunction(const std::string& functionName);

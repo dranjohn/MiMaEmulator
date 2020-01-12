@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 #include <cctype>
 #include <memory>
 #include <string>
@@ -8,6 +8,7 @@
 #include <istream>
 #include <fstream>
 #include <functional>
+#include <regex>
 
 #include "MicroProgram.h"
 
@@ -23,6 +24,9 @@ namespace MiMa {
 	class MicroProgramCompiler {
 	private:
 		class CompileMode {
+		public:
+			static const std::regex emptyLinePattern;
+
 		protected:
 			MicroProgramCompiler& compiler;
 			CompileMode(MicroProgramCompiler& compiler) : compiler(compiler) {}
@@ -37,16 +41,23 @@ namespace MiMa {
 			void endOfLine(MicroProgramCodeList& currentCode);
 			void endOfLine(bool& fixedJump, MicroProgramCodeList& currentCode);
 		public:
-			virtual bool isControl(const char& control) = 0;
-			virtual void addToken(const char& control, char* token) = 0;
+			virtual bool addLine(const std::string& line) = 0;
 
 			virtual void closeCompileMode() = 0;
-			virtual void finish(char* remaining);
+			virtual void finish();
 		};
 
 
 	private:
 		class DefaultCompileMode : public CompileMode {
+		private:
+			static const std::regex labelMatcher;
+			static const std::regex instructionMatcher;
+
+			static const std::regex registerTransferMatcher;
+			static const std::regex assignmentMatcher;
+			static const std::regex jumpMatcher;
+
 		private:
 			//current line of code encoding
 			bool fixedJump = false;
@@ -56,28 +67,31 @@ namespace MiMa {
 		public:
 			DefaultCompileMode(MicroProgramCompiler& compiler);
 
-			bool isControl(const char& control) override;
-			void addToken(const char& control, char* token) override;
+			bool addLine(const std::string& line) override;
 
 			void closeCompileMode() override;
 		};
 
 		class ConditionalCompileMode : public CompileMode {
 		private:
+			static const std::regex conditionalJumpMatcher;
+
+		private:
 			const std::string conditionName;
 			const size_t conditionMax;
-
-			size_t lowerLimit;
-			size_t upperLimit;
 		public:
 			ConditionalCompileMode(MicroProgramCompiler& compiler, const std::string& conditionName, const size_t& conditionMax);
 
-			bool isControl(const char& control) override;
-			void addToken(const char& control, char* token) override;
+			bool addLine(const std::string& line) override;
 
 			void closeCompileMode() override;
 		};
 
+
+	private:
+		static const std::regex compilerDirectivePattern;
+		static const std::regex compilerDirectiveFunctionMatcher;
+		static const std::regex compilerDirectiveParameterMatcher;
 
 	private:
 		//current compile mode
@@ -91,16 +105,15 @@ namespace MiMa {
 		std::unordered_map<std::string, uint8_t> labels;
 		std::multimap<std::string, std::function<bool(const uint8_t&)>> labelAddListeners;
 
-		//line tracking
-		bool lineStart = true;
+
+		void addDirective(const std::string& directive);
 
 	public:
 		MicroProgramCompiler();
 
-		bool isControl(const char& control);
-		void addToken(const char& control, char* token);
+		void addLine(const std::string& line);
 
-		MicroProgram finish(char* remaining);
+		MicroProgram finish();
 
 
 		// ------------------------------------------------------
@@ -108,11 +121,8 @@ namespace MiMa {
 		// Use these for simple compilation of common input types
 		// ------------------------------------------------------
 		static MicroProgram compile(char* microProgramCode);
-		static MicroProgram compile(std::istream& microProgramCode);
+		//static MicroProgram compile(std::istream& microProgramCode);
 		 
-		static MicroProgram compileFile(const char*& fileName);
-
-	private:
-		static MicroProgram compile(CharStream& microProgramCodeStream);
+		//static MicroProgram compileFile(const char*& fileName);
 	};
 }

@@ -4,7 +4,7 @@
 
 namespace MiMa {
 	const std::regex MiMaMemoryCompiler::assignmentMatcher(R"(\s*(.*?)\s*\=\s*(.*?)\s*)");
-	const std::regex MiMaMemoryCompiler::instructionMatcher(R"(\s*(?:([^\s]+?)\:\s+)?([^\s]+?)(?:\s+([^\s]+?))?\s*)");
+	const std::regex MiMaMemoryCompiler::instructionMatcher(R"(\s*(?:([^\s]+?)\:\s*)?([^\s]+?)(?:\s+([^\s]+?))?\s*)");
 
 	const std::regex MiMaMemoryCompiler::identifiers(R"([_a-zA-Z][_a-zA-Z0-9]*)");
 	const std::regex MiMaMemoryCompiler::decNumber(R"(\-?[0-9]+)");
@@ -75,9 +75,9 @@ namespace MiMa {
 					MIMA_LOG_ERROR("The compilation start point may not be assigned the negative number 0x{:X}", compilationStart);
 					return;
 				}
-				if (compilationStart >= MinimalMachine::MEMORY_CAPACITY) {
+				if (compilationStart >= MEMORY_CAPACITY) {
 					//compilation start may not exceed memory capacity
-					MIMA_LOG_ERROR("The compilation start point 0x{:X} may not exceed the memory capacity 0x{:X}", compilationStart, MinimalMachine::MEMORY_CAPACITY);
+					MIMA_LOG_ERROR("The compilation start point 0x{:X} may not exceed the memory capacity 0x{:X}", compilationStart, MEMORY_CAPACITY);
 					return;
 				}
 
