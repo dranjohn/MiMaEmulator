@@ -588,4 +588,31 @@ namespace MiMa {
 
 		return compiler.finish();
 	}
+
+	//Interface: read input from an input providing the code for the program.
+	MicroProgram MicroProgramCompiler::compile(std::istream& microProgramCode) {
+		MIMA_LOG_INFO("Compiling microprogram from given input");
+
+		MicroProgramCompiler compiler;
+
+		std::string codeLine;
+		while (std::getline(microProgramCode, codeLine)) {
+			compiler.addLine(codeLine);
+		}
+
+		return compiler.finish();
+	}
+
+
+	//Interface: read input from a file containing the code for the program.
+	MicroProgram MicroProgramCompiler::compileFile(const char*& fileName) {
+		MIMA_LOG_INFO("Compiling microprogram from an input file");
+
+		std::ifstream fileInputStream(fileName);
+		MicroProgram program = compile(fileInputStream);
+
+		fileInputStream.close();
+
+		return program;
+	}
 }

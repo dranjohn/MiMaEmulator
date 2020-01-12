@@ -2,6 +2,8 @@
 
 #include <regex>
 #include <string>
+#include <istream>
+#include <fstream>
 
 #include "mima/MinimalMachine.h"
 
@@ -33,5 +35,8 @@ namespace MiMa {
 		// Use these for simple compilation of common input types
 		// ------------------------------------------------------
 		static MemoryCell* compile(char* mimaProgramCode);
+		static MemoryCell* compile(std::istream& mimaProgramCode);
+
+		static MemoryCell* compileFile(const char*& fileName);
 	};
 }

@@ -155,7 +155,14 @@ namespace MiMa {
 	}
 
 
+
+	// ---------------------
+	// Compilation interface
+	// ---------------------
+
+	//Interface: read input from a pointer to a char array containing the code for the program.
 	MemoryCell* MiMaMemoryCompiler::compile(char* mimaProgramCode) {
+		MIMA_LOG_INFO("Compiling mimaprogram from given code string");
 		MiMaMemoryCompiler compiler;
 
 		std::istringstream mimaProgramCodeStream(mimaProgramCode);
@@ -165,5 +172,31 @@ namespace MiMa {
 		}
 
 		return compiler.mimaMemory;
+	}
+
+	//Interface: read input from an input providing the code for the program.
+	MemoryCell* MiMaMemoryCompiler::compile(std::istream& mimaProgramCode) {
+		MIMA_LOG_INFO("Compiling mimaprogram from given input");
+		MiMaMemoryCompiler compiler;
+
+		std::string codeLine;
+		while (std::getline(mimaProgramCode, codeLine)) {
+			compiler.addLine(codeLine);
+		}
+
+		return compiler.mimaMemory;
+	}
+
+
+	//Interface: read input from a file containing the code for the program.
+	MemoryCell* MiMaMemoryCompiler::compileFile(const char*& fileName) {
+		MIMA_LOG_INFO("Compiling mimaprogram from an input file");
+
+		std::ifstream fileInputStream(fileName);
+		MemoryCell* program = compile(fileInputStream);
+
+		fileInputStream.close();
+
+		return program;
 	}
 }

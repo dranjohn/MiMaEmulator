@@ -123,7 +123,7 @@ int main() {
 	MiMa::MinimalMachine mima(instructionDecoder, memory);
 	mima.printState();
 
-	//mima.emulateLifeTime();
+	mima.emulateLifeTime();
 	mima.printState();
 
 	delete[] memory;
