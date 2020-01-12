@@ -14,7 +14,6 @@
 
 #include "debug/Log.h"
 #include "util/BinaryOperatorBuffer.h"
-#include "util/CharStream.h"
 
 namespace MiMa {
 	//Utility: binary operators understandable by the micro program compiler

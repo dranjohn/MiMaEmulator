@@ -9,7 +9,6 @@
 
 #include <fmt/format.h>
 
-#include "util/CharStream.h"
 #include "StatusBit.h"
 #include "mima/mimaprogram/MiMaMemory.h"
 
