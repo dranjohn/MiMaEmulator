@@ -24,6 +24,9 @@
     <ClInclude Include="src\debug\LogFormat.h">
       <Filter>debug</Filter>
     </ClInclude>
+    <ClInclude Include="src\mima\CompilerException.h">
+      <Filter>mima</Filter>
+    </ClInclude>
     <ClInclude Include="src\mima\MinimalMachine.h">
       <Filter>mima</Filter>
     </ClInclude>
@@ -36,10 +39,10 @@
     <ClInclude Include="src\mima\microprogram\StatusBit.h">
       <Filter>mima\microprogram</Filter>
     </ClInclude>
-    <ClInclude Include="src\mima\mimaprogram\MiMaMemory.h">
+    <ClInclude Include="src\mima\mimaprogram\MiMaCompiler.h">
       <Filter>mima\mimaprogram</Filter>
     </ClInclude>
-    <ClInclude Include="src\mima\mimaprogram\MiMaMemoryCompiler.h">
+    <ClInclude Include="src\mima\mimaprogram\MiMaMemory.h">
       <Filter>mima\mimaprogram</Filter>
     </ClInclude>
     <ClInclude Include="src\util\BinaryOperatorBuffer.h">
@@ -54,7 +57,6 @@
     <ClInclude Include="src\util\Tree.h">
       <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="src\mima\CompilerException.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\debug\Log.cpp">
@@ -72,7 +74,7 @@
     <ClCompile Include="src\mima\microprogram\MicroProgramCompiler.cpp">
       <Filter>mima\microprogram</Filter>
     </ClCompile>
-    <ClCompile Include="src\mima\mimaprogram\MiMaMemoryCompiler.cpp">
+    <ClCompile Include="src\mima\mimaprogram\MiMaCompiler.cpp">
       <Filter>mima\mimaprogram</Filter>
     </ClCompile>
   </ItemGroup>

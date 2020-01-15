@@ -10,7 +10,7 @@
 #include "CLI/Command.h"
 
 namespace MiMaCLI {
-	typedef std::unordered_map<std::string, std::shared_ptr<MiMa::MicroProgram>> NamedMicroPrograms;
+	typedef std::unordered_map<std::string, std::shared_ptr<const MiMa::MicroProgram>> NamedMicroPrograms;
 	typedef std::unordered_map<std::string, std::shared_ptr<MiMa::MinimalMachine>> NamedMinimalMachines;
 
 	struct MiMaCLIState {

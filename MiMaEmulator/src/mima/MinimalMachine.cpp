@@ -11,7 +11,7 @@
 
 
 namespace MiMa {
-	MinimalMachine::MinimalMachine(const MicroProgram& instructionDecoder, MemoryCell memory[MEMORY_CAPACITY]) :
+	MinimalMachine::MinimalMachine(const std::shared_ptr<const MicroProgram>& instructionDecoder, const std::shared_ptr<MemoryCell[]>& memory) :
 		//registers
 		accumulator({ 0 }),
 		instructionAddressRegister(0),
@@ -40,7 +40,7 @@ namespace MiMa {
 		StatusBitMap statusBits;
 		statusBits.insert({ "op_code", instructionRegister.opCode.value });
 		statusBits.insert({ "accumulator_negative", accumulator.negative.value });
-		MicroProgramCode microCode = instructionDecoder.getMicroCode(instructionDecoderState, statusBits);
+		MicroProgramCode microCode = instructionDecoder->getMicroCode(instructionDecoderState, statusBits);
 
 		MIMA_LOG_TRACE("Found microprogram instruction {}", microCode);
 

@@ -3,7 +3,7 @@
 #include <cstdint>
 
 namespace MiMa {
-	constexpr size_t MEMORY_CAPACITY = 0xFFFFF;
+	constexpr size_t DEFAULT_MEMORY_CAPACITY = 0xFFFFF;
 
 	struct MemoryCell {
 		uint32_t data : 24;

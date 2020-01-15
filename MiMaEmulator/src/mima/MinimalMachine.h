@@ -59,16 +59,16 @@ namespace MiMa {
 		Data storageDataRegister : DATA_SIZE;
 
 		//Exchangable MiMa components:
-		const MicroProgram instructionDecoder;
-		MemoryCell* memory;
+		std::shared_ptr<const MicroProgram> instructionDecoder;
+		std::shared_ptr<MemoryCell[]> memory;
 
 		//MiMa state:
 		bool running;
 		uint8_t instructionDecoderState;
 		MemoryState memoryState;
 	public:
-		MinimalMachine(const MicroProgram& instructionDecoder, MemoryCell memory[MEMORY_CAPACITY]);
-		~MinimalMachine() { delete[] memory; MIMA_LOG_INFO("Destructed MiMa"); }
+		MinimalMachine(const std::shared_ptr<const MicroProgram>& instructionDecoder, const std::shared_ptr<MemoryCell[]>& memory);
+		~MinimalMachine() { MIMA_LOG_INFO("Destructed MiMa"); }
 
 		//emulate minimal machine
 		void emulateClockCycle();
@@ -92,7 +92,7 @@ struct fmt::formatter<MiMa::MinimalMachine> {
 
 		DataNode<std::string>& instructionDecoderRoot = root.addChild("Instruction decoder state");
 		instructionDecoderRoot.addChild(fmt::format("next microprogram instruction address: 0x{:02X}", mima.instructionDecoderState));
-		instructionDecoderRoot.addChild(fmt::format("next microprogram instruction code: {}", mima.instructionDecoder.getMicroCode(mima.instructionDecoderState, MiMa::StatusBitMap())));
+		instructionDecoderRoot.addChild(fmt::format("next microprogram instruction code: {}", mima.instructionDecoder->getMicroCode(mima.instructionDecoderState, MiMa::StatusBitMap())));
 
 		DataNode<std::string>& registersRoot = root.addChild("Register states");
 		registersRoot.addChild(fmt::format("IAR: 0x{:05X}", mima.instructionAddressRegister));

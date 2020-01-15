@@ -1,4 +1,4 @@
-#include "MiMaMemoryCompiler.h"
+#include "MiMaCompiler.h"
 
 #include <sstream>
 
@@ -77,9 +77,9 @@ namespace MiMa {
 					MIMA_LOG_ERROR("The compilation start point may not be assigned the negative number 0x{:X}", compilationStart);
 					return;
 				}
-				if (compilationStart >= MEMORY_CAPACITY) {
+				if (compilationStart >= DEFAULT_MEMORY_CAPACITY) {
 					//compilation start may not exceed memory capacity
-					MIMA_LOG_ERROR("The compilation start point 0x{:X} may not exceed the memory capacity 0x{:X}", compilationStart, MEMORY_CAPACITY);
+					MIMA_LOG_ERROR("The compilation start point 0x{:X} may not exceed the memory capacity 0x{:X}", compilationStart, DEFAULT_MEMORY_CAPACITY);
 					return;
 				}
 
@@ -163,7 +163,7 @@ namespace MiMa {
 	// ---------------------
 
 	//Interface: read input from a pointer to a char array containing the code for the program.
-	MemoryCell* MiMaMemoryCompiler::compile(const std::string& mimaProgramCode) {
+	std::shared_ptr<MemoryCell[]> MiMaMemoryCompiler::compile(const std::string& mimaProgramCode) {
 		MIMA_LOG_INFO("Compiling mimaprogram from given code string");
 		MiMaMemoryCompiler compiler;
 
@@ -177,7 +177,7 @@ namespace MiMa {
 	}
 
 	//Interface: read input from an input providing the code for the program.
-	MemoryCell* MiMaMemoryCompiler::compile(std::istream& mimaProgramCode) {
+	std::shared_ptr<MemoryCell[]> MiMaMemoryCompiler::compile(std::istream& mimaProgramCode) {
 		MIMA_LOG_INFO("Compiling mimaprogram from given input");
 		MiMaMemoryCompiler compiler;
 
@@ -191,7 +191,7 @@ namespace MiMa {
 
 
 	//Interface: read input from a file containing the code for the program.
-	MemoryCell* MiMaMemoryCompiler::compileFile(const std::string& fileName) {
+	std::shared_ptr<MemoryCell[]> MiMaMemoryCompiler::compileFile(const std::string& fileName) {
 		MIMA_LOG_INFO("Compiling mimaprogram from an input file");
 
 		std::ifstream fileInputStream(fileName);
@@ -199,7 +199,7 @@ namespace MiMa {
 			throw CompilerException(fmt::format("Failed to open mima program code file '{}'", fileName));
 		}
 
-		MemoryCell* program = compile(fileInputStream);
+		std::shared_ptr<MemoryCell[]> program = compile(fileInputStream);
 
 		fileInputStream.close();
 		return program;

@@ -112,16 +112,16 @@ namespace MiMa {
 
 		void addLine(const std::string& line);
 
-		MicroProgram finish();
+		std::shared_ptr<const MicroProgram> finish();
 
 
 		// ------------------------------------------------------
 		// Compilation utility methods
 		// Use these for simple compilation of common input types
 		// ------------------------------------------------------
-		static MicroProgram compile(const std::string& microProgramCode);
-		static MicroProgram compile(std::istream& microProgramCode);
-		 
-		static MicroProgram compileFile(const std::string& fileName);
+		static std::shared_ptr<const MicroProgram> compile(const std::string& microProgramCode);
+		static std::shared_ptr<const MicroProgram> compile(std::istream& microProgramCode);
+		
+		static std::shared_ptr<const MicroProgram> compileFile(const std::string& fileName);
 	};
 }

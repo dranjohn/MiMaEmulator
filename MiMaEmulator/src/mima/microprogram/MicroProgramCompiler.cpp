@@ -555,7 +555,7 @@ namespace MiMa {
 	}
 
 
-	MicroProgram MicroProgramCompiler::finish() {
+	std::shared_ptr<const MicroProgram> MicroProgramCompiler::finish() {
 		currentCompileMode->finish();
 
 		for (auto unresolvedListener = labelAddListeners.begin(); unresolvedListener != labelAddListeners.end(); ++unresolvedListener) {
@@ -565,7 +565,7 @@ namespace MiMa {
 		//create microprogram
 		MIMA_LOG_INFO("Finished microprogram compilation at 0x{:02X}", firstFree);
 
-		MicroProgram program(memory);
+		std::shared_ptr<const MicroProgram> program = std::make_shared<MicroProgram>(memory);
 		return program;
 	}
 
@@ -576,7 +576,7 @@ namespace MiMa {
 	// ---------------------
 
 	//Interface: read input from a pointer to a char array containing the code for the program.
-	MicroProgram MicroProgramCompiler::compile(const std::string& microProgramCode) {
+	std::shared_ptr<const MicroProgram> MicroProgramCompiler::compile(const std::string& microProgramCode) {
 		MIMA_LOG_INFO("Compiling microprogram from given code string");
 
 		MicroProgramCompiler compiler;
@@ -591,7 +591,7 @@ namespace MiMa {
 	}
 
 	//Interface: read input from an input providing the code for the program.
-	MicroProgram MicroProgramCompiler::compile(std::istream& microProgramCode) {
+	std::shared_ptr<const MicroProgram> MicroProgramCompiler::compile(std::istream& microProgramCode) {
 		MIMA_LOG_INFO("Compiling microprogram from given input");
 
 		MicroProgramCompiler compiler;
@@ -606,7 +606,7 @@ namespace MiMa {
 
 
 	//Interface: read input from a file containing the code for the program.
-	MicroProgram MicroProgramCompiler::compileFile(const std::string& fileName) {
+	std::shared_ptr<const MicroProgram> MicroProgramCompiler::compileFile(const std::string& fileName) {
 		MIMA_LOG_INFO("Compiling microprogram from an input file");
 
 		std::ifstream fileInputStream(fileName);
@@ -614,7 +614,7 @@ namespace MiMa {
 			throw CompilerException(fmt::format("Failed to open microprogram code file '{}'", fileName));
 		}
 
-		MicroProgram program = compile(fileInputStream);
+		std::shared_ptr<const MicroProgram> program = compile(fileInputStream);
 
 		fileInputStream.close();
 		return program;

@@ -7,7 +7,7 @@
 #include <fmt/format.h>
 
 #include "mima/microprogram/MicroProgramCompiler.h"
-#include "mima/mimaprogram/MiMaMemoryCompiler.h"
+#include "mima/mimaprogram/MiMaCompiler.h"
 #include "mima/CompilerException.h"
 
 namespace MiMaCLI {
@@ -72,8 +72,8 @@ namespace MiMaCLI {
 		}
 
 		try {
-			MiMa::MicroProgram microprogram = MiMa::MicroProgramCompiler::compileFile(arguments[1]);
-			(state->microprograms).insert({ arguments[0], std::make_shared<MiMa::MicroProgram>(microprogram) });
+			//std::shared_ptr<const MiMa::MicroProgram> microprogram = MiMa::MicroProgramCompiler::compileFile(arguments[1]);
+			//(state->microprograms).insert({ arguments[0], microprogram });
 		}
 		catch (const MiMa::CompilerException & exc) {
 			throw CommandException(exc);
@@ -106,8 +106,8 @@ namespace MiMaCLI {
 		size_t lowerLimit = std::min((size_t)std::stoi(arguments[1]), maxUpperLimit);
 		size_t upperLimit = std::min((size_t)std::stoi(arguments[2]), maxUpperLimit);
 
-		std::string x = fmt::format("Microprogram '{}':\n{}:{},{}{}", foundMicroprogram->first, '{', lowerLimit, upperLimit, '}');
-		return { false, fmt::format(x, *(foundMicroprogram->second)) };
+		std::string microprogramOutputFormat = fmt::format("Microprogram '{{}}':\n{}:{},{}{}", '{', lowerLimit, upperLimit, '}');
+		return { false, fmt::format(microprogramOutputFormat, foundMicroprogram->first, *(foundMicroprogram->second)) };
 	};
 
 
@@ -131,7 +131,7 @@ namespace MiMaCLI {
 			return { false, fmt::format("No microprogram under the name '{}' exists", arguments[0]) };
 		}
 
-		(state->minimalMachines).insert({ arguments[0], std::make_shared<MiMa::MinimalMachine>(*(foundMicroprogram->second), MiMa::MiMaMemoryCompiler::compileFile(arguments[1])) });
+		(state->minimalMachines).insert({ arguments[0], std::make_shared<MiMa::MinimalMachine>(foundMicroprogram->second, MiMa::MiMaMemoryCompiler::compileFile(arguments[1])) });
 
 		return { false, fmt::format("Created minimal machine '{}' with the microprogram '{}'", arguments[0], foundMicroprogram->first) };
 	};

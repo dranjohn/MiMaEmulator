@@ -100,8 +100,8 @@ IF EXIST ..\bin\Release-windows-x86_64\MiMaEmulator\MiMaEmulator.lib\ (xcopy /Q 
     <ClInclude Include="src\mima\microprogram\MicroProgram.h" />
     <ClInclude Include="src\mima\microprogram\MicroProgramCompiler.h" />
     <ClInclude Include="src\mima\microprogram\StatusBit.h" />
+    <ClInclude Include="src\mima\mimaprogram\MiMaCompiler.h" />
     <ClInclude Include="src\mima\mimaprogram\MiMaMemory.h" />
-    <ClInclude Include="src\mima\mimaprogram\MiMaMemoryCompiler.h" />
     <ClInclude Include="src\util\BinaryOperatorBuffer.h" />
     <ClInclude Include="src\util\BitField.h" />
     <ClInclude Include="src\util\MinType.h" />
@@ -113,7 +113,7 @@ IF EXIST ..\bin\Release-windows-x86_64\MiMaEmulator\MiMaEmulator.lib\ (xcopy /Q 
     <ClCompile Include="src\mima\MinimalMachine.cpp" />
     <ClCompile Include="src\mima\microprogram\MicroProgram.cpp" />
     <ClCompile Include="src\mima\microprogram\MicroProgramCompiler.cpp" />
-    <ClCompile Include="src\mima\mimaprogram\MiMaMemoryCompiler.cpp" />
+    <ClCompile Include="src\mima\mimaprogram\MiMaCompiler.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

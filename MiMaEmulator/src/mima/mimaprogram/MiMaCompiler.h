@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <regex>
 #include <string>
 #include <istream>
@@ -19,7 +20,7 @@ namespace MiMa {
 
 	private:
 		uint32_t compilationAddress = 0;
-		MemoryCell* mimaMemory = new MemoryCell[MEMORY_CAPACITY];
+		std::shared_ptr<MemoryCell[]> mimaMemory = std::shared_ptr<MemoryCell[]>(new MemoryCell[DEFAULT_MEMORY_CAPACITY]);
 
 	private:
 		bool addFunction(const std::string& functionName);
@@ -34,9 +35,9 @@ namespace MiMa {
 		// Compilation utility methods
 		// Use these for simple compilation of common input types
 		// ------------------------------------------------------
-		static MemoryCell* compile(const std::string& mimaProgramCode);
-		static MemoryCell* compile(std::istream& mimaProgramCode);
+		static std::shared_ptr<MemoryCell[]> compile(const std::string& mimaProgramCode);
+		static std::shared_ptr<MemoryCell[]> compile(std::istream& mimaProgramCode);
 
-		static MemoryCell* compileFile(const std::string& fileName);
+		static std::shared_ptr<MemoryCell[]> compileFile(const std::string& fileName);
 	};
 }
