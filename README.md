@@ -14,9 +14,9 @@ This emulation features:
 These commands currently work in the CLI:
   * exit - Exits the CLI
   * microprogram
-    * microprogram compile <name> <fileName> - compiles a microprogram
-    * microprogram show <name> <lowerLimit> <upperLimit> - prints a microprogram to the CLI
+    * microprogram compile  \<name> \<fileName> - compiles a microprogram
+    * microprogram show \<name> \<lowerLimit> \<upperLimit> - prints a microprogram to the CLI
   * mima
-    * mima compile <name> <fileName> <microprogramName> - create a minimal machine with given name from a file containing program code and the given microprogram.
-    * mima show <name> - print the minimal machine to the CLI
-    * mima emulate <name> <cycle|instruction|lifetime> - lets the minimal machine emulate a cycle/instruction/lifetime.
+    * mima compile \<name> \<fileName> \<microprogramName> - create a minimal machine with given name from a file containing program code and the given microprogram.
+    * mima show \<name> - print the minimal machine to the CLI
+    * mima emulate \<name> \<cycle|instruction|lifetime> - lets the minimal machine emulate a cycle/instruction/lifetime.
