@@ -119,9 +119,9 @@ namespace MiMa {
 		// Compilation utility methods
 		// Use these for simple compilation of common input types
 		// ------------------------------------------------------
-		static MicroProgram compile(char* microProgramCode);
+		static MicroProgram compile(const std::string& microProgramCode);
 		static MicroProgram compile(std::istream& microProgramCode);
 		 
-		static MicroProgram compileFile(const char*& fileName);
+		static MicroProgram compileFile(const std::string& fileName);
 	};
 }

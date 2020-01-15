@@ -246,15 +246,19 @@ public:
 			++it;
 		}
 
+		if (upperLimit >= 0x100) {
+			throw format_error("The upper limit may not exceed the microprogram memory capacity (0x100)");
+		}
+
+		if (lowerLimit > upperLimit) {
+			throw format_error(fmt::format("The lower limit (0x{:X}) may not exceed the upper limit (0x{:X})", lowerLimit, upperLimit));
+		}
+
 		return it;
 	}
 
 	template<typename FormatContext>
 	auto format(const MiMa::MicroProgram& program, FormatContext& ctx) {
-		if (lowerLimit >= upperLimit) {
-			return fmt::format_to(ctx.out(), "");
-		}
-
 		if (lowerLimit + 1 == upperLimit) {
 			return fmt::format_to(ctx.out(), "at 0x{:X}: {}", lowerLimit, program.memory[lowerLimit]);
 		}

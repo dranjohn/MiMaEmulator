@@ -34,9 +34,9 @@ namespace MiMa {
 		// Compilation utility methods
 		// Use these for simple compilation of common input types
 		// ------------------------------------------------------
-		static MemoryCell* compile(char* mimaProgramCode);
+		static MemoryCell* compile(const std::string& mimaProgramCode);
 		static MemoryCell* compile(std::istream& mimaProgramCode);
 
-		static MemoryCell* compileFile(const char*& fileName);
+		static MemoryCell* compileFile(const std::string& fileName);
 	};
 }

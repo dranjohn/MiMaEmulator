@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "StatusBit.h"
+#include "mima/CompilerException.h"
 
 namespace MiMa {
 	// ---------------
@@ -575,7 +576,7 @@ namespace MiMa {
 	// ---------------------
 
 	//Interface: read input from a pointer to a char array containing the code for the program.
-	MicroProgram MicroProgramCompiler::compile(char* microProgramCode) {
+	MicroProgram MicroProgramCompiler::compile(const std::string& microProgramCode) {
 		MIMA_LOG_INFO("Compiling microprogram from given code string");
 
 		MicroProgramCompiler compiler;
@@ -605,14 +606,17 @@ namespace MiMa {
 
 
 	//Interface: read input from a file containing the code for the program.
-	MicroProgram MicroProgramCompiler::compileFile(const char*& fileName) {
+	MicroProgram MicroProgramCompiler::compileFile(const std::string& fileName) {
 		MIMA_LOG_INFO("Compiling microprogram from an input file");
 
 		std::ifstream fileInputStream(fileName);
+		if (!fileInputStream.good()) {
+			throw CompilerException(fmt::format("Failed to open microprogram code file '{}'", fileName));
+		}
+
 		MicroProgram program = compile(fileInputStream);
 
 		fileInputStream.close();
-
 		return program;
 	}
 }

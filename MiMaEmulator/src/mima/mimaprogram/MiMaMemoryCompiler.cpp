@@ -2,6 +2,8 @@
 
 #include <sstream>
 
+#include "mima/CompilerException.h"
+
 namespace MiMa {
 	const std::regex MiMaMemoryCompiler::assignmentMatcher(R"(\s*(.*?)\s*\=\s*(.*?)\s*)");
 	const std::regex MiMaMemoryCompiler::instructionMatcher(R"(\s*(?:([^\s]+?)\:\s*)?([^\s]+?)(?:\s+([^\s]+?))?\s*)");
@@ -161,7 +163,7 @@ namespace MiMa {
 	// ---------------------
 
 	//Interface: read input from a pointer to a char array containing the code for the program.
-	MemoryCell* MiMaMemoryCompiler::compile(char* mimaProgramCode) {
+	MemoryCell* MiMaMemoryCompiler::compile(const std::string& mimaProgramCode) {
 		MIMA_LOG_INFO("Compiling mimaprogram from given code string");
 		MiMaMemoryCompiler compiler;
 
@@ -189,14 +191,17 @@ namespace MiMa {
 
 
 	//Interface: read input from a file containing the code for the program.
-	MemoryCell* MiMaMemoryCompiler::compileFile(const char*& fileName) {
+	MemoryCell* MiMaMemoryCompiler::compileFile(const std::string& fileName) {
 		MIMA_LOG_INFO("Compiling mimaprogram from an input file");
 
 		std::ifstream fileInputStream(fileName);
+		if (!fileInputStream.good()) {
+			throw CompilerException(fmt::format("Failed to open mima program code file '{}'", fileName));
+		}
+
 		MemoryCell* program = compile(fileInputStream);
 
 		fileInputStream.close();
-
 		return program;
 	}
 }

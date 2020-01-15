@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 16
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sandbox", "Sandbox\Sandbox.vcxproj", "{F4C124E3-60A1-A37E-69B9-2E55D5170AE0}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ConsoleInterface", "ConsoleInterface\ConsoleInterface.vcxproj", "{0901CF7E-F5F9-EDD0-1E2C-D3550A84CDDC}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MiMaEmulator", "MiMaEmulator\MiMaEmulator.vcxproj", "{72FE3FAC-5E61-CF50-07E7-0707F3289BD3}"
 EndProject
 Global
@@ -15,6 +17,10 @@ Global
 		{F4C124E3-60A1-A37E-69B9-2E55D5170AE0}.Debug|x64.Build.0 = Debug|x64
 		{F4C124E3-60A1-A37E-69B9-2E55D5170AE0}.Release|x64.ActiveCfg = Release|x64
 		{F4C124E3-60A1-A37E-69B9-2E55D5170AE0}.Release|x64.Build.0 = Release|x64
+		{0901CF7E-F5F9-EDD0-1E2C-D3550A84CDDC}.Debug|x64.ActiveCfg = Debug|x64
+		{0901CF7E-F5F9-EDD0-1E2C-D3550A84CDDC}.Debug|x64.Build.0 = Debug|x64
+		{0901CF7E-F5F9-EDD0-1E2C-D3550A84CDDC}.Release|x64.ActiveCfg = Release|x64
+		{0901CF7E-F5F9-EDD0-1E2C-D3550A84CDDC}.Release|x64.Build.0 = Release|x64
 		{72FE3FAC-5E61-CF50-07E7-0707F3289BD3}.Debug|x64.ActiveCfg = Debug|x64
 		{72FE3FAC-5E61-CF50-07E7-0707F3289BD3}.Debug|x64.Build.0 = Debug|x64
 		{72FE3FAC-5E61-CF50-07E7-0707F3289BD3}.Release|x64.ActiveCfg = Release|x64

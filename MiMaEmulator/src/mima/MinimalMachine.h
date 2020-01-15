@@ -6,7 +6,9 @@
 #include "microprogram/MicroProgram.h"
 #include "util/MinType.h"
 #include "util/Bitfield.h"
+#include "util/Tree.h"
 #include "debug/Log.h"
+#include "debug/LogFormat.h"
 #include "mimaprogram/MiMaMemory.h"
 
 namespace MiMa {
@@ -18,6 +20,8 @@ namespace MiMa {
 
 
 	class MinimalMachine {
+		friend struct fmt::formatter<MiMa::MinimalMachine>;
+
 	public:
 		//Define data sizes for the MiMa.
 		static const size_t DATA_SIZE = 24;
@@ -64,7 +68,7 @@ namespace MiMa {
 		MemoryState memoryState;
 	public:
 		MinimalMachine(const MicroProgram& instructionDecoder, MemoryCell memory[MEMORY_CAPACITY]);
-		~MinimalMachine() { MIMA_LOG_INFO("Destructed MiMa"); }
+		~MinimalMachine() { delete[] memory; MIMA_LOG_INFO("Destructed MiMa"); }
 
 		//emulate minimal machine
 		void emulateClockCycle();
@@ -74,3 +78,32 @@ namespace MiMa {
 		void printState() const;
 	};
 }
+
+template<>
+struct fmt::formatter<MiMa::MinimalMachine> {
+	constexpr auto parse(format_parse_context& ctx) { return ctx.end(); }
+
+	template<typename FormatContext>
+	auto format(const MiMa::MinimalMachine& mima, FormatContext& ctx) {
+		Tree<std::string> hierarchy("MinimalMachine state");
+		DataNode<std::string>& root = hierarchy.getRoot();
+
+		root.addChild(fmt::format("running: {}", mima.running));
+
+		DataNode<std::string>& instructionDecoderRoot = root.addChild("Instruction decoder state");
+		instructionDecoderRoot.addChild(fmt::format("next microprogram instruction address: 0x{:02X}", mima.instructionDecoderState));
+		instructionDecoderRoot.addChild(fmt::format("next microprogram instruction code: {}", mima.instructionDecoder.getMicroCode(mima.instructionDecoderState, MiMa::StatusBitMap())));
+
+		DataNode<std::string>& registersRoot = root.addChild("Register states");
+		registersRoot.addChild(fmt::format("IAR: 0x{:05X}", mima.instructionAddressRegister));
+		registersRoot.addChild(fmt::format("IR: 0x{:06X}", mima.instructionRegister.value));
+		registersRoot.addChild(fmt::format("X: 0x{:06X}", mima.X));
+		registersRoot.addChild(fmt::format("Y: 0x{:06X}", mima.Y));
+		registersRoot.addChild(fmt::format("Z: 0x{:06X}", mima.Z));
+		registersRoot.addChild(fmt::format("Accumulator: 0x{:06X}", mima.accumulator.value));
+		registersRoot.addChild(fmt::format("SAR: 0x{:05X}", mima.storageAddressRegister));
+		registersRoot.addChild(fmt::format("SDR: 0x{:06X}", mima.storageDataRegister));
+
+		return fmt::format_to(ctx.out(), MiMa::formatHierarchy(hierarchy));
+	}
+};

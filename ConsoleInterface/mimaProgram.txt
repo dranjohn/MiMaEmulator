@@ -1,0 +1,6 @@
+* = 0
+LDC $FF
+ADD $20
+HALT
+* = $20
+DS 3

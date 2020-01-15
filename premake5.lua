@@ -37,7 +37,8 @@ project (projectName)
 
 	postbuildcommands
 	{
-		"{COPY} %{cfg.buildtarget.relpath} ../bin/" .. outputDir .. "/Sandbox"
+		"{COPY} %{cfg.buildtarget.relpath} ../bin/" .. outputDir .. "/Sandbox",
+		"{COPY} %{cfg.buildtarget.relpath} ../bin/" .. outputDir .. "/ConsoleInterface"
 	}
 
 	filter "system:windows"
@@ -51,7 +52,8 @@ project (projectName)
 
 	filter "configurations:Release"
 		defines "MIMA_RELEASE"
-		optimize "On"
+		symbols "On"
+		--optimize "On"
 
 project "Sandbox"
 	location "Sandbox"
@@ -71,6 +73,7 @@ project "Sandbox"
 
 	includedirs
 	{
+		"%{prj.name}/src",
 		projectName .. "/src",
 		projectName .. "/vendor/spdlog/include",
 		projectName .. "/vendor/fmt/include"
@@ -92,4 +95,48 @@ project "Sandbox"
 
 	filter "configurations:Release"
 		defines "MIMA_RELEASE"
-		optimize "On"
+		symbols "On"
+		--optimize "On"
+
+project "ConsoleInterface"
+	location "ConsoleInterface"
+	kind "ConsoleApp"
+
+	language "C++"
+	cppdialect "C++17"
+	
+	targetdir ("bin/" .. outputDir .. "/%{prj.name}")
+	objdir ("bin-int/" .. outputDir .. "/%{prj.name}")
+
+	files
+	{
+		"%{prj.name}/src/**.h",
+		"%{prj.name}/src/**.cpp"
+	}
+
+	includedirs
+	{
+		"%{prj.name}/src",
+		projectName .. "/src",
+		projectName .. "/vendor/spdlog/include",
+		projectName .. "/vendor/fmt/include"
+	}
+
+	links
+	{
+		projectName
+	}
+
+	filter "system:windows"
+		systemversion "latest"
+		staticruntime "on"
+		
+
+	filter "configurations:Debug"
+		defines "MIMA_DEBUG"
+		symbols "On"
+
+	filter "configurations:Release"
+		defines "MIMA_RELEASE"
+		symbols "On"
+		--optimize "On"

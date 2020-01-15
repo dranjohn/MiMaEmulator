@@ -20,12 +20,18 @@ namespace MiMa {
 		stdoutSink->set_pattern(STANDARD_SPDLOG_STDOUT_PATTERN);
 
 		//create file sink with default level trace
+#ifdef MIMA_LOG
 		std::shared_ptr<spdlog::sinks::basic_file_sink_mt> fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("log/mimaEmulation.log", true);
 		fileSink->set_level(spdlog::level::level_enum::trace);
 		fileSink->set_pattern(STANDARD_SPDLOG_FILE_PATTERN);
+#endif
 
 		//create spdlog logger
-		spdlog::sinks_init_list sinks = { stdoutSink, fileSink };
+		spdlog::sinks_init_list sinks = { stdoutSink,
+#ifdef MIMA_LOG
+			fileSink
+#endif
+		};
 
 		std::shared_ptr<spdlog::logger> spdlogLogger = std::make_shared<spdlog::logger>("mimaDefaultLogger", sinks);
 		spdlogLogger->set_level(spdlog::level::level_enum::trace);

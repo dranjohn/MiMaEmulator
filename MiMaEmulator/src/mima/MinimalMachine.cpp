@@ -184,25 +184,6 @@ namespace MiMa {
 
 
 	void MinimalMachine::printState() const {
-		Tree<std::string> hierarchy("MinimalMachine state");
-		DataNode<std::string>& root = hierarchy.getRoot();
-
-		root.addChild(fmt::format("running: {}", running));
-
-		DataNode<std::string>& instructionDecoderRoot = root.addChild("Instruction decoder state");
-		instructionDecoderRoot.addChild(fmt::format("next microprogram instruction address: 0x{:02X}", instructionDecoderState));
-		instructionDecoderRoot.addChild(fmt::format("next microprogram instruction code: {}", instructionDecoder.getMicroCode(instructionDecoderState, StatusBitMap())));
-
-		DataNode<std::string>& registersRoot = root.addChild("Register states");
-		registersRoot.addChild(fmt::format("IAR: 0x{:05X}", instructionAddressRegister));
-		registersRoot.addChild(fmt::format("IR: 0x{:06X}", instructionRegister.value));
-		registersRoot.addChild(fmt::format("X: 0x{:06X}", X));
-		registersRoot.addChild(fmt::format("Y: 0x{:06X}", Y));
-		registersRoot.addChild(fmt::format("Z: 0x{:06X}", Z));
-		registersRoot.addChild(fmt::format("Accumulator: 0x{:06X}", accumulator.value));
-		registersRoot.addChild(fmt::format("SAR: 0x{:05X}", storageAddressRegister));
-		registersRoot.addChild(fmt::format("SDR: 0x{:06X}", storageDataRegister));
-
-		MIMA_LOG_INFO("\n{}", formatHierarchy(hierarchy));
+		MIMA_LOG_INFO("\n{}", *this);
 	}
 }

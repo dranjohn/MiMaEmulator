@@ -1,0 +1,94 @@
+//fetch phase
+start: IAR -> SAR; IAR -> X; R = 1;
+ONE -> Y; R = 1;
+ALU = ADD; R = 1;
+Z -> IAR;
+SDR -> IR;
+
+//conditional decode by the first eight bits of the instruction register
+!cm(conditional, op_code, 255)
+//default decode result is halting
+[0, max] #halt
+//short operation codes (span from 0xX0 to 0xXF)
+[0, 15] #ldc
+[16, 31] #ldv
+[32, 47] #stv
+[48, 63] #add
+[64, 79] #and
+[80, 95] #or
+[96, 111] #xor
+[112, 127] #eql
+[128, 143] #jmp
+[144, 159] #jmn
+//long operation codes (one of 0xFX)
+//[240, 240] #halt is implicitly defined, since halting is the default
+[241, 241] #not
+[242, 242] #rar;
+
+!cm(default)
+
+//return function (often used, therefore declaration here)
+ret: Z -> ACCU; #start;
+
+//load a constant to accumulator
+ldc: IR -> ACCU; #start;
+
+//load a value from storage to accumulator
+ldv: IR -> SAR; R = 1;
+R = 1;
+R = 1;
+SDR -> ACCU; #start;
+
+//store the value in the accumulator to storage
+stv: IR -> SAR;
+ACCU -> SDR; W = 1;
+W = 1;
+W = 1; #start;
+
+//add the value in the accumulator and one in storage
+add: IR -> SAR; R = 1;
+ACCU -> X; R = 1;
+R = 1;
+SDR -> Y; ALU = ADD; #ret;
+
+//apply bitwise and to the value in the accumulator and one in storage
+and: IR -> SAR; R = 1;
+ACCU -> X; R = 1;
+R = 1;
+SDR -> Y; ALU = AND; #ret;
+
+//apply bitwise or to the value in the accumulator and one in storage
+or: IR -> SAR; R = 1;
+ACCU -> X; R = 1;
+R = 1;
+SDR -> Y; ALU = OR; #ret;
+
+//apply bitwise xor to the value in the accumulator and one in storage
+xor: IR -> SAR; R = 1;
+ACCU -> X; R = 1;
+R = 1;
+SDR -> Y; ALU = XOR; #ret;
+
+//compare the value in the accumulator and one in storage
+//store ~0 in accumulator if they are equal, 0 otherwise
+eql: IR -> SAR; R = 1;
+ACCU -> X; R = 1;
+R = 1;
+SDR -> Y; ALU = EQL; #ret;
+
+//jump to the given instruction!
+jmp: IR -> IAR; #start;
+
+//jump only if the value in the accumulator is negative (for example ~0)
+jmn:
+!cm(conditional, accumulator_negative, 1)
+[0, 0] #start
+[1, 1] #jmp;
+
+!cm(default)
+
+//apply bitwise not to the value in the accumulator
+not: ACCU -> X; ALU = NOT; #ret;
+
+//apply bitwise right rotation to the value in the accumulator
+rar: ACCU -> X; ALU = RAR; #ret;
