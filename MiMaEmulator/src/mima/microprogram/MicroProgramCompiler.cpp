@@ -152,7 +152,7 @@ namespace MiMa {
 
 	// --- Constants definitions
 
-	const std::regex MicroProgramCompiler::CompileMode::emptyLinePattern("\s*");
+	const std::regex MicroProgramCompiler::CompileMode::emptyLinePattern(R"(\s*)");
 
 
 	// --- Functions ---

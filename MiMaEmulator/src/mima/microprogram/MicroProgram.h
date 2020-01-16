@@ -1,10 +1,10 @@
 #pragma once
 
+#include <algorithm>
 #include <cctype>
 #include <cstdint>
-#include <memory>
-#include <algorithm>
 #include <functional>
+#include <memory>
 #include <unordered_map>
 
 #include <fmt/format.h>
@@ -16,8 +16,18 @@
 
 
 namespace MiMa {
+	//a map containing all status bits provided by the minimal machine requesting a microcode
 	typedef std::unordered_map<std::string, size_t> StatusBitMap;
 
+
+
+	// ------------------------------------
+	// Unconditional microprogram code line
+	//
+	// A single compiled microprogram code
+	// line for readonly memory in an
+	// instruction decoder or similar.
+	// ------------------------------------
 
 	class MicroProgramCode {
 		friend struct fmt::formatter<MiMa::MicroProgramCode>;
@@ -81,24 +91,37 @@ namespace MiMa {
 	
 
 
-	// ---------------------------------------------------------------------------------------------------
-	// A conditional line of microprogram code with at least three possibilities, represented using a list
-	// ---------------------------------------------------------------------------------------------------
+	// ------------------------------------
+	// Singly linked microprogram code list
+	// 
+	// A conditional line of microprogram
+	// code, represented using a singly
+	// linked, non-circular list.
+	// ------------------------------------
+
+	// --- Nodes of the singly linked list ---
 
 	class MicroProgramCodeNode {
 		friend class MicroProgramCodeList;
 		friend struct fmt::formatter<MiMa::MicroProgramCodeList>;
 
 	private:
+		//next node in the singly linked list (nullptr if this is the last element)
 		MicroProgramCodeNode* next;
 
+		//contents of this node (lowerLimit is implicitly the upperLimit + 1 of the previous node, or 0 if this is the head node)
 		size_t upperConditionLimit;
 		MicroProgramCode code;
 
+		//private constructor so only MicroProgramCodeLists can create instances
 		MicroProgramCodeNode(const size_t& upperConditionLimit, MicroProgramCodeNode* next = nullptr, MicroProgramCode code = MicroProgramCode());
+
 	public:
 		~MicroProgramCodeNode();
 	};
+
+
+	// --- Singly linked list representation ---
 
 	class MicroProgramCodeList {
 		friend struct fmt::formatter<MiMa::MicroProgramCodeList>;
@@ -131,7 +154,7 @@ namespace MiMa {
 		}
 
 
-		MicroProgramCode get(const StatusBitMap& statusBits);
+		MicroProgramCode get(const StatusBitMap& statusBits) const;
 	};
 
 
@@ -148,9 +171,9 @@ namespace MiMa {
 
 	private:
 		//minimal machine microprogram read-only memory
-		std::shared_ptr<MicroProgramCodeList[]> memory;
+		std::shared_ptr<const MicroProgramCodeList[]> memory;
 	public:
-		MicroProgram(const std::shared_ptr<MicroProgramCodeList[]>& memory) : memory(memory) {}
+		MicroProgram(const std::shared_ptr<const MicroProgramCodeList[]>& memory) : memory(memory) {}
 
 		inline const MicroProgramCode getMicroCode(const uint8_t& memoryAddress, const StatusBitMap& statusBits) const { return memory[memoryAddress].get(statusBits); }
 	};
@@ -185,7 +208,7 @@ struct fmt::formatter<MiMa::MicroProgramCodeList> {
 
 		//otherwise, format each node into a separate line
 		std::string listOutput = fmt::format("Conditional microcode for {} up to max 0x{:X}:\n{{}}", codeList.conditionName, codeList.conditionMax);
-		std::string nodeFormat = "up to 0x{:02X}: {}\n{{}}";
+		std::string nodeFormat = "up to 0x{:X}: {}\n{{}}";
 
 		MiMa::MicroProgramCodeNode* current = codeList.head;
 		while (current != nullptr) {

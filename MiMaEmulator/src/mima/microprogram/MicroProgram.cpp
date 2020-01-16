@@ -1,6 +1,12 @@
 #include "MicroProgram.h"
 
 namespace MiMa {
+	// ----------------------
+	// Microprogram code list
+	// ----------------------
+
+	// --- List nodes ---
+
 	MicroProgramCodeNode::MicroProgramCodeNode(const size_t& upperConditionLimit, MicroProgramCodeNode* next, MicroProgramCode code) :
 		next(next),
 		code(code),
@@ -8,10 +14,12 @@ namespace MiMa {
 	{}
 
 	MicroProgramCodeNode::~MicroProgramCodeNode() {
+		//the nodes of the singly linked list recursively delete the next one
 		if (next != nullptr) delete next;
 	}
 
 
+	// --- List class ---
 
 	MicroProgramCodeList::MicroProgramCodeList(const std::string& conditionName, const size_t& conditionMax) :
 		conditionName(conditionName),
@@ -20,18 +28,22 @@ namespace MiMa {
 	{}
 
 	MicroProgramCodeList::~MicroProgramCodeList() {
+		//delete the head node, which results in recursive deletion of all nodes
 		delete head;
 	}
 
 
 	void MicroProgramCodeList::reset() {
+		//default: reset the list to a single code with no condition
 		reset("", 0);
 	}
 
 	void MicroProgramCodeList::reset(const std::string& conditionName, const size_t& conditionMax) {
+		//set new condition name and maximum
 		this->conditionName = conditionName;
 		this->conditionMax = conditionMax;
 
+		//delete and reset list head
 		delete head;
 		head = new MicroProgramCodeNode(conditionMax);
 	}
@@ -98,7 +110,7 @@ namespace MiMa {
 		func(upperLimitNode->code);
 	}
 
-	MicroProgramCode MicroProgramCodeList::get(const StatusBitMap& statusBits) {
+	MicroProgramCode MicroProgramCodeList::get(const StatusBitMap& statusBits) const {
 		//find the value of the given condition
 		//if it is not in the map, it defaults to zero
 		StatusBitMap::const_iterator conditionLocation = statusBits.find(conditionName);

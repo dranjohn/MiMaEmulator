@@ -181,9 +181,4 @@ namespace MiMa {
 			emulateClockCycle();
 		}
 	}
-
-
-	void MinimalMachine::printState() const {
-		MIMA_LOG_INFO("\n{}", *this);
-	}
 }

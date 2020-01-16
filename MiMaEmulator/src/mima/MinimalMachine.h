@@ -3,27 +3,32 @@
 #include <string>
 #include <memory>
 
-#include "microprogram/MicroProgram.h"
 #include "util/MinType.h"
 #include "util/Bitfield.h"
 #include "util/Tree.h"
+
+#include "mimaprogram/MiMaMemory.h"
+#include "microprogram/MicroProgram.h"
+
 #include "debug/Log.h"
 #include "debug/LogFormat.h"
-#include "mimaprogram/MiMaMemory.h"
 
 namespace MiMa {
-	struct MemoryState {
-		uint32_t address : 20;
-		uint32_t access : 1;
-		uint32_t accessDuration : 11;
-	};
-
+	// --------------------------------------
+	// Emulatable minimal machine abstraction
+	//
+	// Contains the common components of a
+	// minimal machine, and lets the user
+	// exchange some of these, for example
+	// the instruction decoder program or the
+	// initial main memory.
+	// --------------------------------------
 
 	class MinimalMachine {
 		friend struct fmt::formatter<MiMa::MinimalMachine>;
 
 	public:
-		//Define data sizes for the MiMa.
+		//define data sizes for the MiMa
 		static const size_t DATA_SIZE = 24;
 		static const size_t ADDRESS_SIZE = 20;
 		static const size_t OP_CODE_SIZE = 8;
@@ -32,16 +37,24 @@ namespace MiMa {
 		typedef typename MinType<ADDRESS_SIZE>::type Address;
 
 	private:
-		//Constant one register:
+		//keeps track of the current main memory access
+		struct MemoryState {
+			uint32_t address : 20;
+			uint32_t access : 1;
+			uint32_t accessDuration : 11;
+		};
+
+	private:
+		//cnstant one register
 		static const Data ONE = 1;
 
-		//Accumulator for storing calculation results:
+		//accumulator for storing calculation results
 		union {
 			Data value : DATA_SIZE;
 			BitField<DATA_SIZE - 1, 1> negative;
 		} accumulator;
 
-		//Registers for instruction reading:
+		//registers for instruction reading
 		Address instructionAddressRegister : ADDRESS_SIZE;
 		union {
 			Data value : DATA_SIZE;
@@ -49,20 +62,20 @@ namespace MiMa {
 			BitField<DATA_SIZE - OP_CODE_SIZE, OP_CODE_SIZE> opCode;
 		} instructionRegister;
 
-		//ALU registers:
+		//ALU registers
 		Data X : DATA_SIZE;
 		Data Y : DATA_SIZE;
 		Data Z : DATA_SIZE;
 
-		//Registers for reading/writing from/to the memory:
+		//registers for reading/writing from/to the memory
 		Address storageAddressRegister : ADDRESS_SIZE;
 		Data storageDataRegister : DATA_SIZE;
 
-		//Exchangable MiMa components:
+		//exchangable MiMa components
 		std::shared_ptr<const MicroProgram> instructionDecoder;
 		std::shared_ptr<MemoryCell[]> memory;
 
-		//MiMa state:
+		//MiMa state
 		bool running;
 		uint8_t instructionDecoderState;
 		MemoryState memoryState;
@@ -74,11 +87,12 @@ namespace MiMa {
 		void emulateClockCycle();
 		void emulateInstructionCycle();
 		void emulateLifeTime();
-
-		void printState() const;
 	};
 }
 
+
+
+//minimal machine fmt formatting definition
 template<>
 struct fmt::formatter<MiMa::MinimalMachine> {
 	constexpr auto parse(format_parse_context& ctx) { return ctx.end(); }
