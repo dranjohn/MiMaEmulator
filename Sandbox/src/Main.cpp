@@ -17,10 +17,10 @@ int main() {
 	MiMa::MinimalMachine mima(instructionDecoder, memory);
 
 	//run the mima
-	MIMA_LOG_INFO(mima);
+	MIMA_LOG_INFO("\n{}", mima);
 
 	mima.emulateLifeTime();
-	MIMA_LOG_INFO(mima);
+	MIMA_LOG_INFO("\n{}", mima);
 
 	return 0;
 }

@@ -3,9 +3,6 @@
 #include <fmt/format.h>
 
 namespace MiMaCLI {
-	const std::regex Command::wordPattern(R"(([^\s]+))");
-
-
 	CommandResult Command::execute(const std::string&) const {
 		return { true, "Attempted to execute default command construct" };
 	}
@@ -18,6 +15,8 @@ namespace MiMaCLI {
 
 
 
+	const std::regex ConditionalCommand::wordPattern(R"(([^\s]+))");
+	
 	ConditionalCommand::ConditionalCommand(const NamedCommandPointers& commands) {
 		NamedCommandPointers::const_iterator it = commands.begin();
 		while (it != commands.end()) {
@@ -29,12 +28,12 @@ namespace MiMaCLI {
 	CommandResult ConditionalCommand::execute(const std::string& input) const {
 		std::smatch matches;
 		if (!std::regex_search(input, matches, wordPattern)) {
-			return { false, "Can't find a subcommand for an empty string" };
+			throw CommandException("can't find a subcommand when no subcommand is given");
 		}
 
 		NamedCommands::const_iterator foundCommand = commands.find(matches[1]);
 		if (foundCommand == commands.end()) {
-			return { false, fmt::format("Couldn't find (sub)command '{}'", matches[1].str()) };
+			throw CommandException(fmt::format("couldn't find (sub)command '{}'", matches[1].str()));
 		}
 
 		return (foundCommand->second)->execute(matches.suffix());

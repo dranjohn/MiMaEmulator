@@ -10,6 +10,8 @@
 #include "mima/mimaprogram/MiMaCompiler.h"
 #include "mima/CompilerException.h"
 
+#include "CLI/CommandUtility.h"
+
 namespace MiMaCLI {
 	const std::regex MiMaCLIState::identifierPattern(R"([_a-zA-Z][_a-zA-Z0-9]*)");
 
@@ -26,22 +28,6 @@ namespace MiMaCLI {
 	// --- Constants definitions ---
 
 	static const std::regex emptyLinePattern(R"(\s*)");
-
-
-	// --- Utility function definitions ---
-
-	std::vector<std::string> getArguments(const std::string& input) {
-		std::sregex_iterator argumentsBegin = std::sregex_iterator(input.begin(), input.end(), Command::wordPattern);
-		std::sregex_iterator argumentsEnd = std::sregex_iterator();
-
-		std::vector<std::string> arguments;
-		while (argumentsBegin != argumentsEnd) {
-			arguments.push_back((*argumentsBegin)[0]);
-			++argumentsBegin;
-		}
-
-		return arguments;
-	}
 	
 
 	// -----------------------------
@@ -51,9 +37,7 @@ namespace MiMaCLI {
 	// --- Exit function ---
 
 	static const CommandExecution exitFunction = [](const std::string& input)->CommandResult {
-		if (!std::regex_match(input, emptyLinePattern)) {
-			return { false, "The exit command doesn't take any arguments" };
-		}
+		CommandUtility::assertNoArguments(input);
 
 		return { true, "Exiting MiMa CLI" };
 	};
@@ -62,49 +46,34 @@ namespace MiMaCLI {
 	// --- Microprogram command functions ---
 
 	static const MiMaCLIStateModifier microprogramCompileFunction = [](const std::string& input, const std::shared_ptr<MiMaCLIState>& state)->CommandResult {
-		std::vector<std::string> arguments = getArguments(input);
+		std::vector<std::string> arguments = CommandUtility::getArguments(input, 2);
 
-		if (arguments.size() != 2) {
-			return { false, "Two arguments are required for 'microprogram compile'" };
-		}
-		if (!std::regex_match(arguments[0], MiMaCLIState::identifierPattern)) {
-			return { false, fmt::format("'{}' is not a valid identifier", arguments[0]) };
-		}
+		CommandUtility::validateIdentifier(arguments[0], MiMaCLIState::identifierPattern);
 
 		try {
-			//std::shared_ptr<const MiMa::MicroProgram> microprogram = MiMa::MicroProgramCompiler::compileFile(arguments[1]);
-			//(state->microprograms).insert({ arguments[0], microprogram });
+			std::shared_ptr<const MiMa::MicroProgram> microprogram = MiMa::MicroProgramCompiler::compileFile(arguments[1]);
+			(state->microprograms).insert({ arguments[0], microprogram });
 		}
-		catch (const MiMa::CompilerException & exc) {
+		catch (const MiMa::CompilerException& exc) {
 			throw CommandException(exc);
 		}
 
 		return { false, fmt::format("Compiled microprogram '{}'", arguments[1]) };
 	};
 
-	static const std::regex positiveDecPattern(R"([0-9]+)");
 	static const size_t maxUpperLimit = 0xFF;
 	static const MiMaCLIStateModifier microprogramShowFunction = [](const std::string& input, const std::shared_ptr<MiMaCLIState>& state)->CommandResult {
-		std::vector<std::string> arguments = getArguments(input);
+		std::vector<std::string> arguments = CommandUtility::getArguments(input, 3);
 
-		if (arguments.size() != 3) {
-			return { false, "Three arguments are required for 'microprogram show'" };
-		}
-		if (!std::regex_match(arguments[0], MiMaCLIState::identifierPattern)) {
-			return { false, fmt::format("'{}' is not a valid identifier", arguments[0]) };
-		}
-		if (!(std::regex_match(arguments[1], positiveDecPattern) && std::regex_match(arguments[2], positiveDecPattern))) {
-			return { false, "Argument 2 and 3 both need to be positive decimal numbers" };
-		}
+		CommandUtility::validateIdentifier(arguments[0], MiMaCLIState::identifierPattern);
+		size_t lowerLimit = std::min(CommandUtility::validatePositiveDecimalInteger(arguments[1]), maxUpperLimit);
+		size_t upperLimit = std::min(CommandUtility::validatePositiveDecimalInteger(arguments[2]), maxUpperLimit);
 
 		NamedMicroPrograms::const_iterator foundMicroprogram = (state->microprograms).find(arguments[0]);
 
 		if (foundMicroprogram == (state->microprograms).end()) {
-			return { false, fmt::format("No microprogram under the name '{}' exists", arguments[0]) };
+			throw CommandException(fmt::format("No microprogram under the name '{}' exists", arguments[0]));
 		}
-
-		size_t lowerLimit = std::min((size_t)std::stoi(arguments[1]), maxUpperLimit);
-		size_t upperLimit = std::min((size_t)std::stoi(arguments[2]), maxUpperLimit);
 
 		std::string microprogramOutputFormat = fmt::format("Microprogram '{{}}':\n{}:{},{}{}", '{', lowerLimit, upperLimit, '}');
 		return { false, fmt::format(microprogramOutputFormat, foundMicroprogram->first, *(foundMicroprogram->second)) };
@@ -114,37 +83,30 @@ namespace MiMaCLI {
 	// --- Minimal machine command functions ---
 
 	static const MiMaCLIStateModifier minimalMachineCompile = [](const std::string& input, const std::shared_ptr<MiMaCLIState>& state)->CommandResult {
-		std::vector<std::string> arguments = getArguments(input);
+		std::vector<std::string> arguments = CommandUtility::getArguments(input, 3);
 
-		if (arguments.size() != 3) {
-			return { false, "Two arguments are required for 'mima compile'" };
-		}
-		if (!std::regex_match(arguments[0], MiMaCLIState::identifierPattern)) {
-			return { false, fmt::format("'{}' is not a valid identifier", arguments[0]) };
-		}
-		if (!std::regex_match(arguments[2], MiMaCLIState::identifierPattern)) {
-			return { false, fmt::format("'{}' is not a valid identifier", arguments[2]) };
-		}
+		CommandUtility::validateIdentifier(arguments[0], MiMaCLIState::identifierPattern);
+		CommandUtility::validateIdentifier(arguments[2], MiMaCLIState::identifierPattern);
 
 		NamedMicroPrograms::const_iterator foundMicroprogram = (state->microprograms).find(arguments[2]);
 		if (foundMicroprogram == (state->microprograms).end()) {
-			return { false, fmt::format("No microprogram under the name '{}' exists", arguments[0]) };
+			throw CommandException(fmt::format("No microprogram under the name '{}' exists", arguments[2]));
 		}
 
-		(state->minimalMachines).insert({ arguments[0], std::make_shared<MiMa::MinimalMachine>(foundMicroprogram->second, MiMa::MiMaMemoryCompiler::compileFile(arguments[1])) });
+		try {
+			(state->minimalMachines).insert({ arguments[0], std::make_shared<MiMa::MinimalMachine>(foundMicroprogram->second, MiMa::MiMaMemoryCompiler::compileFile(arguments[1])) });
+		}
+		catch (const MiMa::CompilerException& exc) {
+			throw CommandException(exc);
+		}
 
 		return { false, fmt::format("Created minimal machine '{}' with the microprogram '{}'", arguments[0], foundMicroprogram->first) };
 	};
 
 	static const MiMaCLIStateModifier minimalMachineShow = [](const std::string& input, const std::shared_ptr<MiMaCLIState>& state)->CommandResult {
-		std::vector<std::string> arguments = getArguments(input);
+		std::vector<std::string> arguments = CommandUtility::getArguments(input, 1);
 
-		if (arguments.size() != 1) {
-			return { false, "One argument are required for 'mima show'" };
-		}
-		if (!std::regex_match(arguments[0], MiMaCLIState::identifierPattern)) {
-			return { false, fmt::format("'{}' is not a valid identifier", arguments[0]) };
-		}
+		CommandUtility::validateIdentifier(arguments[0], MiMaCLIState::identifierPattern);
 
 		NamedMinimalMachines::const_iterator foundMinimalMachine = (state->minimalMachines).find(arguments[0]);
 
@@ -156,16 +118,14 @@ namespace MiMaCLI {
 	};
 
 	static const MiMaCLIStateModifier minimalMachineEmulate = [](const std::string& input, const std::shared_ptr<MiMaCLIState>& state)->CommandResult {
-		std::vector<std::string> arguments = getArguments(input);
+		std::vector<std::string> arguments = CommandUtility::getArguments(input, 2);
 
-		if (arguments.size() != 2) {
-			return { false, "Two arguments are required for 'mima emulate'" };
-		}
+		CommandUtility::validateIdentifier(arguments[0], MiMaCLIState::identifierPattern);
 
 		NamedMinimalMachines::iterator foundMinimalMachine = (state->minimalMachines).find(arguments[0]);
 
 		if (foundMinimalMachine == (state->minimalMachines).end()) {
-			return { false, fmt::format("No minimal machine under the name '{}' exists", arguments[0]) };
+			throw CommandException(fmt::format("No minimal machine under the name '{}' exists", arguments[0]));
 		}
 
 
@@ -185,7 +145,7 @@ namespace MiMaCLI {
 		}
 
 
-		return { false, fmt::format("Unknown emulation step size '{}'", arguments[1]) };
+		throw CommandException(fmt::format("Unknown emulation step size '{}'", arguments[1]));
 	};
 
 

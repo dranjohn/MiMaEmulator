@@ -14,19 +14,18 @@ namespace MiMaCLI {
 
 		std::cout << ">> ";
 		while (std::getline(std::cin, input)) {
-			CommandResult result;
-
+			std::cout << "<< ";
 			try {
-				result = rootCommand->execute(input);
+				CommandResult result = rootCommand->execute(input);
+
+				std::cout << result.output << std::endl;
+
+				if (result.end) {
+					break;
+				}
 			}
 			catch (const CommandException& exc) {
-				result = { false, exc.what() };
-			}
-
-			std::cout << "<< " << result.output << std::endl;
-
-			if (result.end) {
-				break;
+				std::cout << "Failed to execute '" << input << "': " << exc.what() << std::endl;
 			}
 
 			std::cout << ">> ";

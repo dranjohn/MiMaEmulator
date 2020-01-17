@@ -39,6 +39,8 @@ namespace MiMa {
 
 	//Utility: ALU codes
 	uint32_t getALUCode(const std::string& input) {
+		if (input == "RETURN")
+			return 0;
 		if (input == "ADD")
 			return 1;
 		if (input == "RAR")
@@ -54,7 +56,7 @@ namespace MiMa {
 		if (input == "EQL")
 			return 7;
 
-		return 0;
+		throw CompilerException(fmt::format("unknown ALU state '{}'", input));
 	}
 
 
@@ -73,7 +75,7 @@ namespace MiMa {
 		if (identifier == "ACCU")
 			return &MicroProgramCode::setAccumulatorRegisterWriting;
 
-		return &MicroProgramCode::pass;
+		throw CompilerException(fmt::format("unknown writing register '{}'", identifier));
 	}
 
 	//Utility: convert register read identifiers to corresponding control bits
@@ -93,56 +95,8 @@ namespace MiMa {
 		if (identifier == "ACCU")
 			return &MicroProgramCode::setAccumulatorRegisterReading;
 
-		return &MicroProgramCode::pass;
+		throw CompilerException(fmt::format("unknown reading register '{}'", identifier));
 	}
-
-	//Utility: predefined binary operators in compilation
-	static const std::function<void(MicroProgramCode&)> NO_MICROPROGRAM_CODE_MODIFICATION = [](MicroProgramCode&) {};
-
-	BinaryOperator MOVE_OPERATOR = [](const std::string& leftOperand, const std::string& rightOperand)->MicroProgramCodeModifier {
-		//get the read and write functions for the microprogram code modification
-		MicroProgramCodeSetFunction setWrite = getWriteBit(leftOperand);
-		MicroProgramCodeSetFunction setRead = getReadBit(rightOperand);
-
-		//return a modifier executing both these functions
-		MicroProgramCodeModifier registerTransfer = [setWrite, setRead](MicroProgramCode& microProgramCode) {
-			(microProgramCode.*setWrite)();
-			(microProgramCode.*setRead)();
-		};
-		return registerTransfer;
-	};
-	BinaryOperator SET_OPERATOR = [](const std::string& leftOperand, const std::string& rightOperand)->MicroProgramCodeModifier {
-		//the left operand "R" marks that storage read is being (un)set
-		if (leftOperand == "R") {
-			if (rightOperand == "1") {
-				return [](MicroProgramCode& code) { code.enableMemoryRead(); };
-			}
-			if (rightOperand == "0") {
-				return [](MicroProgramCode& code) { code.disableMemoryRead(); };
-			}
-			return NO_MICROPROGRAM_CODE_MODIFICATION;
-		}
-
-		//the left operand "R" marks that storage write is being (un)set
-		if (leftOperand == "W") {
-			if (rightOperand == "1") {
-				return [](MicroProgramCode& code) { code.enableMemoryWrite(); };
-			}
-			if (rightOperand == "0") {
-				return [](MicroProgramCode& code) { code.disableMemoryWrite(); };
-			}
-			return NO_MICROPROGRAM_CODE_MODIFICATION;
-		}
-
-		//the left operand "ALU" marks that an ALU code (in [0, 7]) is being set
-		if (leftOperand == "ALU") {
-			uint8_t ALUCode = getALUCode(rightOperand);
-			return [ALUCode](MicroProgramCode& code) { code.setALUCode(ALUCode); };
-		}
-
-		//if none of these things is being set, return no modification
-		return NO_MICROPROGRAM_CODE_MODIFICATION;
-	};
 
 
 
@@ -161,7 +115,10 @@ namespace MiMa {
 		MIMA_LOG_TRACE("Found label '{}' at address 0x{:02X}", label, compiler.firstFree);
 
 		//add the label to the list of found labels
-		MIMA_ASSERT_ERROR(compiler.labels.find(label) == compiler.labels.end(), "Found duplicate of label {}, using second label found from now on", label);
+		if (compiler.labels.find(label) != compiler.labels.end()) {
+			MIMA_LOG_ERROR("Found duplicate of label '{}'", label);
+			throw CompilerException(fmt::format("found duplicate of label '{}'", label));
+		}
 		compiler.labels.insert({ label, compiler.firstFree });
 
 		//call all listeners waiting for this label to be added
@@ -295,8 +252,7 @@ namespace MiMa {
 	// --- Functions ---
 	
 	MicroProgramCompiler::DefaultCompileMode::DefaultCompileMode(MicroProgramCompiler& compiler) :
-		CompileMode(compiler),
-		operatorBuffer(std::string(""), [](const std::string&, const std::string&) { return NO_MICROPROGRAM_CODE_MODIFICATION; })
+		CompileMode(compiler)
 	{
 		//reset code memory where the program is written too
 		compiler.memory[compiler.firstFree].reset();
@@ -304,7 +260,7 @@ namespace MiMa {
 		MIMA_LOG_TRACE("Opened default compiler mode");
 	}
 
-	bool MicroProgramCompiler::DefaultCompileMode::addLine(const std::string& line) {
+	void MicroProgramCompiler::DefaultCompileMode::addLine(const std::string& line) {
 		std::string codeLine = line;
 		std::smatch matches;
 
@@ -375,19 +331,14 @@ namespace MiMa {
 
 			//unknown instruction
 			MIMA_LOG_ERROR("Found unknown instruction '{}'", instruction);
-			return false;
+			throw CompilerException(fmt::format("found unknown instruction '{}'", instruction));
 		}
 
 		CompileMode::endOfLine(fixedJump, compiler.memory[compiler.firstFree]);
-		return true;
 	}
 
 
 	void MicroProgramCompiler::DefaultCompileMode::closeCompileMode() {
-		//ensure there is nothing remaining in the binary operator buffer
-		MIMA_ASSERT_ERROR(!operatorBuffer.isBufferOccupied(), "Binary operator remaining after finishing compilation with remaining operand");
-
-
 		//log closing of the default compiler mode
 		MIMA_LOG_TRACE("Closed default compiler mode");
 	}
@@ -415,11 +366,11 @@ namespace MiMa {
 	}
 
 
-	bool MicroProgramCompiler::ConditionalCompileMode::addLine(const std::string& line) {
+	void MicroProgramCompiler::ConditionalCompileMode::addLine(const std::string& line) {
 		std::smatch matches;
 
 		if (!std::regex_match(line, matches, conditionalJumpMatcher)) {
-			return false;
+			throw CompilerException(fmt::format("can't parse line '{}' in conditional compile mode", line));
 		}
 
 		const size_t lowerLimit = std::stoi(matches[1]);
@@ -430,7 +381,6 @@ namespace MiMa {
 		if (matches[4] == ";") {
 			CompileMode::endOfLine(compiler.memory[compiler.firstFree]);
 		}
-		return true;
 	}
 
 
@@ -489,7 +439,7 @@ namespace MiMa {
 					//no other arguments are expected
 					if (arguments.size() != 1) {
 						MIMA_LOG_ERROR("Expected one argument for compiler directive function {}, found {}", func, arguments.size());
-						return;
+						throw CompilerException(fmt::format("expected one argument for compiler directive function {}, found {}", func, arguments.size()));
 					}
 
 					//switch compile mode
@@ -506,7 +456,7 @@ namespace MiMa {
 					// 2 | max value of condtion
 					if (arguments.size() != 3) {
 						MIMA_LOG_ERROR("Expected three arguments for compiler directive function {}, only found {}", func, arguments.size());
-						return;
+						throw CompilerException(fmt::format("expected three arguments for compiler directive function {}, only found {}", func, arguments.size()));
 					}
 
 					//check if the maximal condition value is valid
@@ -516,6 +466,7 @@ namespace MiMa {
 					}
 					catch (const std::invalid_argument&) {
 						MIMA_LOG_ERROR("Couldn't convert {} into a condition maximum", arguments[2]);
+						throw CompilerException(fmt::format("couldn't convert {} into a condition maximum", arguments[2]));
 					}
 
 					//switch compile mode
@@ -528,10 +479,11 @@ namespace MiMa {
 			}
 
 			MIMA_LOG_ERROR("Expected at least one argument for compiler directive function {}", func);
-			return;
+			throw CompilerException(fmt::format("expected at least one argument for compiler directive function {}", func));
 		}
 
-		MIMA_LOG_ERROR("Discarding unknwon compiler directive '{}!'", directive);
+		MIMA_LOG_ERROR("Discarding unknwon compiler directive '{}'", directive);
+		throw CompilerException(fmt::format("discarding unknwon compiler directive '{}'", directive));
 	}
 
 	void MicroProgramCompiler::addLine(const std::string& line) {

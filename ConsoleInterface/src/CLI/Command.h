@@ -11,9 +11,6 @@ namespace MiMaCLI {
 
 	class Command {
 	public:
-		static const std::regex wordPattern;
-
-	public:
 		virtual CommandResult execute(const std::string& input) const;
 	};
 
@@ -36,6 +33,9 @@ namespace MiMaCLI {
 
 	class ConditionalCommand : public Command {
 	private:
+		static const std::regex wordPattern;
+
+	private:
 		NamedCommands commands;
 
 	public:
@@ -43,7 +43,6 @@ namespace MiMaCLI {
 
 		CommandResult execute(const std::string& input) const override;
 	};
-
 
 
 	class CommandException : public std::exception {

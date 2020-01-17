@@ -40,7 +40,7 @@ namespace MiMa {
 			void endOfLine(MicroProgramCodeList& currentCode);
 			void endOfLine(bool& fixedJump, MicroProgramCodeList& currentCode);
 		public:
-			virtual bool addLine(const std::string& line) = 0;
+			virtual void addLine(const std::string& line) = 0;
 
 			virtual void closeCompileMode() = 0;
 			virtual void finish();
@@ -60,13 +60,10 @@ namespace MiMa {
 		private:
 			//current line of code encoding
 			bool fixedJump = false;
-
-			//binary operator buffers
-			BinaryOperatorBuffer<std::string, MicroProgramCodeModifier> operatorBuffer;
 		public:
 			DefaultCompileMode(MicroProgramCompiler& compiler);
 
-			bool addLine(const std::string& line) override;
+			void addLine(const std::string& line) override;
 
 			void closeCompileMode() override;
 		};
@@ -81,7 +78,7 @@ namespace MiMa {
 		public:
 			ConditionalCompileMode(MicroProgramCompiler& compiler, const std::string& conditionName, const size_t& conditionMax);
 
-			bool addLine(const std::string& line) override;
+			void addLine(const std::string& line) override;
 
 			void closeCompileMode() override;
 		};

@@ -18,6 +18,7 @@
     <ClInclude Include="src\mimaCLI\MiMaCommandExecutor.h">
       <Filter>mimaCLI</Filter>
     </ClInclude>
+    <ClInclude Include="src\CLI\CommandUtility.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\CLI\Command.cpp">
@@ -30,5 +31,6 @@
     <ClCompile Include="src\mimaCLI\MiMaCommandExecutor.cpp">
       <Filter>mimaCLI</Filter>
     </ClCompile>
+    <ClCompile Include="src\CLI\CommandUtility.cpp" />
   </ItemGroup>
 </Project>

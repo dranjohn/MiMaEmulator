@@ -67,7 +67,7 @@ namespace MiMa {
 			else {
 				//invalid compilation start from matches[2]
 				MIMA_LOG_ERROR("Failed to convert value {} to a decimal or hexadecimal number", matches[2].str());
-				return;
+				throw CompilerException(fmt::format("failed to convert value {} to a decimal or hexadecimal number", matches[2].str()));
 			}
 
 			if (matches[1] == "*") {
@@ -75,12 +75,12 @@ namespace MiMa {
 				if (compilationStart < 0) {
 					//compilation start may not be negative
 					MIMA_LOG_ERROR("The compilation start point may not be assigned the negative number 0x{:X}", compilationStart);
-					return;
+					throw CompilerException(fmt::format("the compilation start point may not be assigned the negative number 0x{:X}", compilationStart));
 				}
 				if (compilationStart >= DEFAULT_MEMORY_CAPACITY) {
 					//compilation start may not exceed memory capacity
 					MIMA_LOG_ERROR("The compilation start point 0x{:X} may not exceed the memory capacity 0x{:X}", compilationStart, DEFAULT_MEMORY_CAPACITY);
-					return;
+					throw CompilerException(fmt::format("the compilation start point 0x{:X} may not exceed the memory capacity 0x{:X}", compilationStart, DEFAULT_MEMORY_CAPACITY));
 				}
 
 				//set compilation start
@@ -96,7 +96,7 @@ namespace MiMa {
 			
 			//unknown assignment to matches[1]
 			MIMA_LOG_ERROR("'{}' is not a valid identifier to have a value assigned too", matches[1].str());
-			return;
+			throw CompilerException(fmt::format("'{}' is not a valid identifier to have a value assigned too", matches[1].str()));
 		}
 
 		//attempt to match the line as a unary instruction
@@ -122,7 +122,7 @@ namespace MiMa {
 				else {
 					//invalid number from matches[2]
 					MIMA_LOG_ERROR("Failed to convert value {} to a decimal or hexadecimal number", matches[3].str());
-					return;
+					throw CompilerException(fmt::format("failed to convert value {} to a decimal or hexadecimal number", matches[3].str()));
 				}
 
 				if (addUnaryFunction(matches[2], argument)) {
@@ -131,6 +131,7 @@ namespace MiMa {
 				else {
 					//invalid function found
 					MIMA_LOG_ERROR("Unknown parameterizerd instruction '{}'", matches[2].str());
+					throw CompilerException(fmt::format("unknown parameterizerd instruction '{}'", matches[2].str()));
 				}
 			}
 			else {
@@ -141,6 +142,7 @@ namespace MiMa {
 				else {
 					//invalid function found
 					MIMA_LOG_ERROR("Unknown instruction '{}'", matches[2].str());
+					throw CompilerException(fmt::format("unknown instruction '{}'", matches[2].str()));
 				}
 			}
 
@@ -149,6 +151,7 @@ namespace MiMa {
 
 		//no valid match
 		MIMA_LOG_ERROR("Failed to compiler '{}'", codeLine);
+		throw CompilerException(fmt::format("failed to compiler '{}'", codeLine));
 	}
 
 
