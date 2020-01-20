@@ -77,5 +77,6 @@
     <ClCompile Include="src\mima\mimaprogram\MiMaCompiler.cpp">
       <Filter>mima\mimaprogram</Filter>
     </ClCompile>
+    <ClCompile Include="src\mima\mimaprogram\MiMaMemory.cpp" />
   </ItemGroup>
 </Project>

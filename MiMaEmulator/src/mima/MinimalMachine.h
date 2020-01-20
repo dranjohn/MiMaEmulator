@@ -73,14 +73,14 @@ namespace MiMa {
 
 		//exchangable MiMa components
 		std::shared_ptr<const MicroProgram> instructionDecoder;
-		std::shared_ptr<MemoryCell[]> memory;
+		std::shared_ptr<MiMaMemory> memory;
 
 		//MiMa state
 		bool running;
 		uint8_t instructionDecoderState;
 		MemoryState memoryState;
 	public:
-		MinimalMachine(const std::shared_ptr<const MicroProgram>& instructionDecoder, const std::shared_ptr<MemoryCell[]>& memory);
+		MinimalMachine(const std::shared_ptr<const MicroProgram>& instructionDecoder, const std::shared_ptr<MiMaMemory>& memory);
 		~MinimalMachine() { MIMA_LOG_INFO("Destructed MiMa"); }
 
 		//emulate minimal machine

@@ -19,25 +19,25 @@ namespace MiMa {
 		if (functionName == "DS")
 			return true;
 
-		SET_FUNCTION(functionName, "HALT", mimaMemory[compilationAddress], 0xF00000)
-		SET_FUNCTION(functionName, "NOT", mimaMemory[compilationAddress], 0xF10000)
-		SET_FUNCTION(functionName, "RAR", mimaMemory[compilationAddress], 0xF20000)
+		SET_FUNCTION(functionName, "HALT", (*mimaMemory)[compilationAddress], 0xF00000)
+		SET_FUNCTION(functionName, "NOT", (*mimaMemory)[compilationAddress], 0xF10000)
+		SET_FUNCTION(functionName, "RAR", (*mimaMemory)[compilationAddress], 0xF20000)
 
 		return false;
 	}
 
 	bool MiMaMemoryCompiler::addUnaryFunction(const std::string& functionName, const uint32_t& argument) {
-		SET_FUNCTION(functionName, "DS", mimaMemory[compilationAddress], argument)
-		SET_FUNCTION(functionName, "LDC", mimaMemory[compilationAddress], argument)
-		SET_FUNCTION(functionName, "LDV", mimaMemory[compilationAddress], 0x100000 | argument)
-		SET_FUNCTION(functionName, "STV", mimaMemory[compilationAddress], 0x200000 | argument)
-		SET_FUNCTION(functionName, "ADD", mimaMemory[compilationAddress], 0x300000 | argument)
-		SET_FUNCTION(functionName, "AND", mimaMemory[compilationAddress], 0x400000 | argument)
-		SET_FUNCTION(functionName, "OR", mimaMemory[compilationAddress], 0x500000 | argument)
-		SET_FUNCTION(functionName, "XOR", mimaMemory[compilationAddress], 0x600000 | argument)
-		SET_FUNCTION(functionName, "EQL", mimaMemory[compilationAddress], 0x700000 | argument)
-		SET_FUNCTION(functionName, "JMP", mimaMemory[compilationAddress], 0x800000 | argument)
-		SET_FUNCTION(functionName, "JMN", mimaMemory[compilationAddress], 0x900000 | argument)
+		SET_FUNCTION(functionName, "DS", (*mimaMemory)[compilationAddress], argument)
+		SET_FUNCTION(functionName, "LDC", (*mimaMemory)[compilationAddress], argument)
+		SET_FUNCTION(functionName, "LDV", (*mimaMemory)[compilationAddress], 0x100000 | argument)
+		SET_FUNCTION(functionName, "STV", (*mimaMemory)[compilationAddress], 0x200000 | argument)
+		SET_FUNCTION(functionName, "ADD", (*mimaMemory)[compilationAddress], 0x300000 | argument)
+		SET_FUNCTION(functionName, "AND", (*mimaMemory)[compilationAddress], 0x400000 | argument)
+		SET_FUNCTION(functionName, "OR", (*mimaMemory)[compilationAddress], 0x500000 | argument)
+		SET_FUNCTION(functionName, "XOR", (*mimaMemory)[compilationAddress], 0x600000 | argument)
+		SET_FUNCTION(functionName, "EQL", (*mimaMemory)[compilationAddress], 0x700000 | argument)
+		SET_FUNCTION(functionName, "JMP", (*mimaMemory)[compilationAddress], 0x800000 | argument)
+		SET_FUNCTION(functionName, "JMN", (*mimaMemory)[compilationAddress], 0x900000 | argument)
 
 		return false;
 	}
@@ -166,7 +166,7 @@ namespace MiMa {
 	// ---------------------
 
 	//Interface: read input from a pointer to a char array containing the code for the program.
-	std::shared_ptr<MemoryCell[]> MiMaMemoryCompiler::compile(const std::string& mimaProgramCode) {
+	std::shared_ptr<MiMaMemory> MiMaMemoryCompiler::compile(const std::string& mimaProgramCode) {
 		MIMA_LOG_INFO("Compiling mimaprogram from given code string");
 		MiMaMemoryCompiler compiler;
 
@@ -180,7 +180,7 @@ namespace MiMa {
 	}
 
 	//Interface: read input from an input providing the code for the program.
-	std::shared_ptr<MemoryCell[]> MiMaMemoryCompiler::compile(std::istream& mimaProgramCode) {
+	std::shared_ptr<MiMaMemory> MiMaMemoryCompiler::compile(std::istream& mimaProgramCode) {
 		MIMA_LOG_INFO("Compiling mimaprogram from given input");
 		MiMaMemoryCompiler compiler;
 
@@ -194,7 +194,7 @@ namespace MiMa {
 
 
 	//Interface: read input from a file containing the code for the program.
-	std::shared_ptr<MemoryCell[]> MiMaMemoryCompiler::compileFile(const std::string& fileName) {
+	std::shared_ptr<MiMaMemory> MiMaMemoryCompiler::compileFile(const std::string& fileName) {
 		MIMA_LOG_INFO("Compiling mimaprogram from an input file");
 
 		std::ifstream fileInputStream(fileName);
@@ -202,7 +202,7 @@ namespace MiMa {
 			throw CompilerException(fmt::format("Failed to open mima program code file '{}'", fileName));
 		}
 
-		std::shared_ptr<MemoryCell[]> program = compile(fileInputStream);
+		std::shared_ptr<MiMaMemory> program = compile(fileInputStream);
 
 		fileInputStream.close();
 		return program;

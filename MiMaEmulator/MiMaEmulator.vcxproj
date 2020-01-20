@@ -110,6 +110,7 @@ IF EXIST ..\bin\Release-windows-x86_64\MiMaEmulator\MiMaEmulator.lib\ (xcopy /Q 
   <ItemGroup>
     <ClCompile Include="src\debug\Log.cpp" />
     <ClCompile Include="src\debug\LogFormat.cpp" />
+    <ClCompile Include="src\mima\mimaprogram\MiMaMemory.cpp" />
     <ClCompile Include="src\mima\MinimalMachine.cpp" />
     <ClCompile Include="src\mima\microprogram\MicroProgram.cpp" />
     <ClCompile Include="src\mima\microprogram\MicroProgramCompiler.cpp" />

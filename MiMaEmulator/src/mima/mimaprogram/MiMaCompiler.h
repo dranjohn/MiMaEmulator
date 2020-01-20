@@ -20,7 +20,7 @@ namespace MiMa {
 
 	private:
 		uint32_t compilationAddress = 0;
-		std::shared_ptr<MemoryCell[]> mimaMemory = std::shared_ptr<MemoryCell[]>(new MemoryCell[DEFAULT_MEMORY_CAPACITY]);
+		std::shared_ptr<MiMaMemory> mimaMemory = std::make_shared<MiMaMemory>();
 
 	private:
 		bool addFunction(const std::string& functionName);
@@ -35,9 +35,9 @@ namespace MiMa {
 		// Compilation utility methods
 		// Use these for simple compilation of common input types
 		// ------------------------------------------------------
-		static std::shared_ptr<MemoryCell[]> compile(const std::string& mimaProgramCode);
-		static std::shared_ptr<MemoryCell[]> compile(std::istream& mimaProgramCode);
+		static std::shared_ptr<MiMaMemory> compile(const std::string& mimaProgramCode);
+		static std::shared_ptr<MiMaMemory> compile(std::istream& mimaProgramCode);
 
-		static std::shared_ptr<MemoryCell[]> compileFile(const std::string& fileName);
+		static std::shared_ptr<MiMaMemory> compileFile(const std::string& fileName);
 	};
 }

@@ -12,7 +12,7 @@
 
 int main() {
 	std::shared_ptr<const MiMa::MicroProgram> instructionDecoder = MiMa::MicroProgramCompiler::compileFile("idCode.txt");
-	std::shared_ptr<MiMa::MemoryCell[]> memory = MiMa::MiMaMemoryCompiler::compileFile("mimaProgram.txt");
+	std::shared_ptr<MiMa::MiMaMemory> memory = MiMa::MiMaMemoryCompiler::compileFile("mimaProgram.txt");
 
 	MiMa::MinimalMachine mima(instructionDecoder, memory);
 

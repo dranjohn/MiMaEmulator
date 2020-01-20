@@ -11,7 +11,7 @@
 
 
 namespace MiMa {
-	MinimalMachine::MinimalMachine(const std::shared_ptr<const MicroProgram>& instructionDecoder, const std::shared_ptr<MemoryCell[]>& memory) :
+	MinimalMachine::MinimalMachine(const std::shared_ptr<const MicroProgram>& instructionDecoder, const std::shared_ptr<MiMaMemory>& memory) :
 		//registers
 		accumulator({ 0 }),
 		instructionAddressRegister(0),
@@ -121,7 +121,7 @@ namespace MiMa {
 				memoryState.accessDuration++;
 
 				if (memoryState.accessDuration >= 3) {
-					memory[storageAddressRegister].data = storageDataRegister;
+					(*memory)[storageAddressRegister].data = storageDataRegister;
 				}
 			}
 			break;
@@ -139,7 +139,7 @@ namespace MiMa {
 				memoryState.accessDuration++;
 
 				if (memoryState.accessDuration >= 3) {
-					storageDataRegister = memory[storageAddressRegister].data;
+					storageDataRegister = (*memory)[storageAddressRegister].data;
 				}
 			}
 			break;
