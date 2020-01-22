@@ -5,6 +5,7 @@
 #include "mima/microprogram/MicroProgram.h"
 #include "mima/microprogram/MicroProgramCompiler.h"
 #include "mima/mimaprogram/MiMaCompiler.h"
+#include "mima/mimaprogram/MiMaMemory.h"
 #include "mima/MinimalMachine.h"
 #include "debug/Log.h"
 #include "mima/CompilerException.h"
@@ -21,6 +22,9 @@ int main() {
 
 	mima.emulateLifeTime();
 	MIMA_LOG_INFO("\n{}", mima);
+
+	const MiMa::MiMaMemory& memRef = *memory;
+	MIMA_LOG_INFO("Minimal machine memory state:\n{}", memRef);
 
 	return 0;
 }

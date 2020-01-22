@@ -3,6 +3,8 @@
 #include <string>
 #include <memory>
 
+#include <fmt/format.h>
+
 #include "util/MinType.h"
 #include "util/Bitfield.h"
 #include "util/Tree.h"
