@@ -103,6 +103,7 @@ IF EXIST ..\bin\Release-windows-x86_64\MiMaEmulator\MiMaEmulator.lib\ (xcopy /Q 
     <ClInclude Include="src\mima\mimaprogram\MiMaCompiler.h" />
     <ClInclude Include="src\mima\mimaprogram\MiMaMemory.h" />
     <ClInclude Include="src\util\BinaryOperatorBuffer.h" />
+    <ClInclude Include="src\util\BinarySearchTree.h" />
     <ClInclude Include="src\util\BitField.h" />
     <ClInclude Include="src\util\MinType.h" />
     <ClInclude Include="src\util\Tree.h" />

@@ -57,6 +57,7 @@
     <ClInclude Include="src\util\Tree.h">
       <Filter>util</Filter>
     </ClInclude>
+    <ClInclude Include="src\util\BinarySearchTree.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\debug\Log.cpp">
