@@ -1,23 +1,25 @@
+-- Workspace setup for the MiMaEmulator
 projectName = "MiMaEmulator"
 
 workspace (projectName)
 	architecture "x64"
 	startproject "Sandbox"
 
-	configurations
-	{
+	configurations {
 		"Debug",
 		"Release"
 	}
-
+	
 outputDir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
+newestCppDialect = "C++17"
 
+-- MiMaEmulator main module
 project (projectName)
 	location (projectName)
 	kind "StaticLib"
 
 	language "C++"
-	cppdialect "C++17"
+	cppdialect (newestCppDialect)
 	
 	targetdir ("bin/" .. outputDir .. "/%{prj.name}")
 	objdir ("bin-int/" .. outputDir .. "/%{prj.name}")
@@ -25,21 +27,18 @@ project (projectName)
 	pchheader "mimapch.h"
 	pchsource "MiMaEmulator/src/mimapch.cpp"
 
-	files
-	{
+	files {
 		"%{prj.name}/src/**.h",
 		"%{prj.name}/src/**.cpp"
 	}
 
-	includedirs
-	{
+	includedirs {
 		"%{prj.name}/src",
 		"%{prj.name}/vendor/spdlog/include",
 		"%{prj.name}/vendor/fmt/include"
 	}
 
-	postbuildcommands
-	{
+	postbuildcommands {
 		"{COPY} %{cfg.buildtarget.relpath} ../bin/" .. outputDir .. "/Sandbox",
 		"{COPY} %{cfg.buildtarget.relpath} ../bin/" .. outputDir .. "/ConsoleInterface"
 	}
@@ -55,35 +54,31 @@ project (projectName)
 
 	filter "configurations:Release"
 		defines "MIMA_RELEASE"
-		symbols "On"
-		--optimize "On"
+		optimize "On"
 
+
+-- Sandbox for testing
 project "Sandbox"
 	location "Sandbox"
 	kind "ConsoleApp"
 
 	language "C++"
-	cppdialect "C++17"
+	cppdialect (newestCppDialect)
 	
 	targetdir ("bin/" .. outputDir .. "/%{prj.name}")
 	objdir ("bin-int/" .. outputDir .. "/%{prj.name}")
 
-	files
-	{
+	files {
 		"%{prj.name}/src/**.h",
 		"%{prj.name}/src/**.cpp"
 	}
 
-	includedirs
-	{
+	includedirs {
 		"%{prj.name}/src",
-		projectName .. "/src",
-		projectName .. "/vendor/spdlog/include",
-		projectName .. "/vendor/fmt/include"
+		projectName .. "/src"
 	}
 
-	links
-	{
+	links {
 		projectName
 	}
 
@@ -98,35 +93,32 @@ project "Sandbox"
 
 	filter "configurations:Release"
 		defines "MIMA_RELEASE"
-		symbols "On"
-		--optimize "On"
+		optimize "On"
 
+
+--Command Line Interface as a user interface to the MiMaEmulator
 project "ConsoleInterface"
 	location "ConsoleInterface"
 	kind "ConsoleApp"
 
 	language "C++"
-	cppdialect "C++17"
+	cppdialect (newestCppDialect)
 	
 	targetdir ("bin/" .. outputDir .. "/%{prj.name}")
 	objdir ("bin-int/" .. outputDir .. "/%{prj.name}")
 
-	files
-	{
+	files {
 		"%{prj.name}/src/**.h",
 		"%{prj.name}/src/**.cpp"
 	}
 
-	includedirs
-	{
+	includedirs {
 		"%{prj.name}/src",
 		projectName .. "/src",
-		projectName .. "/vendor/spdlog/include",
-		projectName .. "/vendor/fmt/include"
+		"%{prj.name}/vendor/fmt/include"
 	}
 
-	links
-	{
+	links {
 		projectName
 	}
 
@@ -141,5 +133,4 @@ project "ConsoleInterface"
 
 	filter "configurations:Release"
 		defines "MIMA_RELEASE"
-		symbols "On"
-		--optimize "On"
+		optimize "On"

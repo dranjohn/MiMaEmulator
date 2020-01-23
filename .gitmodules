@@ -4,3 +4,6 @@
 [submodule "MiMaEmulator/vendor/fmt"]
 	path = MiMaEmulator/vendor/fmt
 	url = https://github.com/fmtlib/fmt
+[submodule "ConsoleInterface/vendor/fmt"]
+	path = ConsoleInterface/vendor/fmt
+	url = https://github.com/fmtlib/fmt
