@@ -1,14 +1,20 @@
 #pragma once
 
+//std library
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <utility>
 
+//external vendor libraries
 #include <fmt/format.h>
 
+//internal utility
 #include "util/BinarySearchTree.h"
+
+//debugging utility
 #include "debug/Log.h"
+
 
 namespace MiMa {
 	constexpr size_t DEFAULT_MEMORY_CAPACITY = 0xFFFFF;

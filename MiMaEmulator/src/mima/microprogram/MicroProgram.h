@@ -1,5 +1,6 @@
 #pragma once
 
+//std library
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
@@ -7,11 +8,14 @@
 #include <memory>
 #include <unordered_map>
 
+//external vendor libraries
 #include <fmt/format.h>
 
-#include "StatusBit.h"
+//internal classes
 #include "mima/mimaprogram/MiMaMemory.h"
+#include "StatusBit.h"
 
+//debugging utility
 #include "debug/Log.h"
 
 

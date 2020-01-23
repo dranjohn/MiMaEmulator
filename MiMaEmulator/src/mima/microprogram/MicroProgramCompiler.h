@@ -1,19 +1,25 @@
 #pragma once
 
+//std library
 #include <cstdint>
 #include <cctype>
-#include <memory>
-#include <string>
-#include <map>
-#include <istream>
 #include <fstream>
 #include <functional>
+#include <istream>
+#include <map>
+#include <memory>
 #include <regex>
+#include <string>
 
+//internal classes
 #include "MicroProgram.h"
 
-#include "debug/Log.h"
+//internal utility
 #include "util/BinaryOperatorBuffer.h"
+
+//debugging utility
+#include "debug/Log.h"
+
 
 namespace MiMa {
 	//Utility: binary operators understandable by the micro program compiler

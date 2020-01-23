@@ -1,6 +1,8 @@
 #pragma once
 
+//debugging utility
 #include "debug/Log.h"
+
 
 template<typename Operand, typename Result>
 class BinaryOperatorBuffer {

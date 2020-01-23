@@ -1,8 +1,10 @@
 #pragma once
 
-#include <cstdint>
+//std library
 #include <cstddef>
+#include <cstdint>
 #include <type_traits>
+
 
 template <size_t bitSize>
 struct MinType {

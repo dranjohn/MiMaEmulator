@@ -1,8 +1,11 @@
 #include "CommandUtility.h"
 
+//external vendor libraries
 #include <fmt/format.h>
 
+//internal classes
 #include "Command.h"
+
 
 namespace MiMaCLI {
 	namespace CommandUtility {

@@ -1,19 +1,25 @@
 #pragma once
 
+//std library
 #include <string>
 #include <memory>
 
+//external vendor libraries
 #include <fmt/format.h>
 
+//internal classes
+#include "mimaprogram/MiMaMemory.h"
+#include "microprogram/MicroProgram.h"
+
+//internal utility
 #include "util/MinType.h"
 #include "util/Bitfield.h"
 #include "util/Tree.h"
 
-#include "mimaprogram/MiMaMemory.h"
-#include "microprogram/MicroProgram.h"
-
+//debugging utility
 #include "debug/Log.h"
 #include "debug/LogFormat.h"
+
 
 namespace MiMa {
 	// --------------------------------------

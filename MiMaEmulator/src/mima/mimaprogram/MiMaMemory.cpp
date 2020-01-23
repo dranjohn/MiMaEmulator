@@ -1,3 +1,4 @@
+#include "mimapch.h"
 #include "MiMaMemory.h"
 
 namespace MiMa {

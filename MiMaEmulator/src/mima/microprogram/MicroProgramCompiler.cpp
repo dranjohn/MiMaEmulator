@@ -1,9 +1,10 @@
+#include "mimapch.h"
 #include "MicroProgramCompiler.h"
 
-#include <sstream>
-
-#include "StatusBit.h"
+//internal classes
 #include "mima/CompilerException.h"
+#include "StatusBit.h"
+
 
 namespace MiMa {
 	// ---------------

@@ -1,7 +1,10 @@
+#include "mimapch.h"
 #include "Log.h"
 
+//external vendor libraries
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
+
 
 namespace MiMa {
 	Logger::Logger(char* name, spdlog::level::level_enum logLevel, const char* loggerPattern) {

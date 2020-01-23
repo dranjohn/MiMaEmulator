@@ -1,9 +1,15 @@
+#include "mimapch.h"
 #include "MinimalMachine.h"
 
+//external vendor libraries
 #include <fmt/format.h>
 
-#include "debug/LogFormat.h"
+//internal utility
 #include "util/Tree.h"
+
+//debugging utility
+#include "debug/LogFormat.h"
+
 
 #define READ_MIMA_REGISTER(cond, db, reg) if (cond) db |= reg
 #define WRITE_MIMA_REGISTER(cond, db, reg) if (cond) reg = db

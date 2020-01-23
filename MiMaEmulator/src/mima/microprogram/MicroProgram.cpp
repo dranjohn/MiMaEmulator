@@ -1,4 +1,6 @@
+#include "mimapch.h"
 #include "MicroProgram.h"
+
 
 namespace MiMa {
 	// ----------------------

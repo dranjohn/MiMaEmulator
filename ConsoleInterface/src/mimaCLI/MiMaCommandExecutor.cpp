@@ -1,16 +1,21 @@
 #include "MiMaCommandExecutor.h"
 
+//std library
 #include <algorithm>
 #include <regex>
 #include <vector>
 
+//external vendor libraries
 #include <fmt/format.h>
 
+//minimal machine
 #include "mima/microprogram/MicroProgramCompiler.h"
 #include "mima/mimaprogram/MiMaCompiler.h"
 #include "mima/CompilerException.h"
 
+//internal classes
 #include "CLI/CommandUtility.h"
+
 
 namespace MiMaCLI {
 	const std::regex MiMaCLIState::identifierPattern(R"([_a-zA-Z][_a-zA-Z0-9]*)");

@@ -1,12 +1,15 @@
 #pragma once
 
+//std library
+#include <fstream>
+#include <istream>
 #include <memory>
 #include <regex>
 #include <string>
-#include <istream>
-#include <fstream>
 
+//internal classes
 #include "mima/MinimalMachine.h"
+
 
 namespace MiMa {
 	class MiMaMemoryCompiler {

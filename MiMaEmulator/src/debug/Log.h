@@ -1,7 +1,11 @@
 #pragma once
 
+//std library
 #include <memory>
+
+//external vendor libraries
 #include <spdlog/spdlog.h>
+
 
 namespace MiMa {
 	constexpr spdlog::level::level_enum STANDARD_SPDLOG_DEFAULT_LEVEL = spdlog::level::level_enum::trace;

@@ -22,6 +22,9 @@ project (projectName)
 	targetdir ("bin/" .. outputDir .. "/%{prj.name}")
 	objdir ("bin-int/" .. outputDir .. "/%{prj.name}")
 
+	pchheader "mimapch.h"
+	pchsource "MiMaEmulator/src/mimapch.cpp"
+
 	files
 	{
 		"%{prj.name}/src/**.h",

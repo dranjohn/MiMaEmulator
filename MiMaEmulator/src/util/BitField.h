@@ -1,6 +1,8 @@
 #pragma once
 
+//internal utility
 #include "MinType.h"
+
 
 template <size_t index, size_t bitSize>
 struct BitField {

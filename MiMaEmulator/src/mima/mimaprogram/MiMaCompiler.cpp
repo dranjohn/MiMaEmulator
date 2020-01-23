@@ -1,8 +1,9 @@
+#include "mimapch.h"
 #include "MiMaCompiler.h"
 
-#include <sstream>
-
+//internal classes
 #include "mima/CompilerException.h"
+
 
 namespace MiMa {
 	const std::regex MiMaMemoryCompiler::assignmentMatcher(R"(\s*(.*?)\s*\=\s*(.*?)\s*)");

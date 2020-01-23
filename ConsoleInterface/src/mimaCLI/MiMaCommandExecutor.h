@@ -1,13 +1,17 @@
 #pragma once
 
+//std library
 #include <functional>
 #include <string>
 #include <unordered_map>
 
+//minimal machine
 #include "mima/microprogram/MicroProgram.h"
 #include "mima/MinimalMachine.h"
 
+//internal classes
 #include "CLI/Command.h"
+
 
 namespace MiMaCLI {
 	typedef std::unordered_map<std::string, std::shared_ptr<const MiMa::MicroProgram>> NamedMicroPrograms;

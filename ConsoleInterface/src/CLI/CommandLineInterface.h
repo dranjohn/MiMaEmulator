@@ -1,8 +1,11 @@
 #pragma once
 
+//std library
 #include <memory>
 
+//internal classes
 #include "Command.h"
+
 
 namespace MiMaCLI {
 	class CommandLineInterface {

@@ -1,14 +1,18 @@
+//std library
 #include <iostream>
 #include <memory>
 #include <vector>
 
+//minimal machine
 #include "mima/microprogram/MicroProgram.h"
 #include "mima/microprogram/MicroProgramCompiler.h"
 #include "mima/mimaprogram/MiMaCompiler.h"
 #include "mima/mimaprogram/MiMaMemory.h"
 #include "mima/MinimalMachine.h"
-#include "debug/Log.h"
 #include "mima/CompilerException.h"
+
+//debugging utility
+#include "debug/Log.h"
 
 
 int main() {

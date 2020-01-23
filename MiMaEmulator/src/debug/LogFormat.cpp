@@ -1,7 +1,6 @@
+#include "mimapch.h"
 #include "LogFormat.h"
 
-#include <vector>
-#include <sstream>
 
 namespace MiMa {
 	constexpr unsigned char char_ELEMENT = 0xC3; //box-building char top-right-bot
